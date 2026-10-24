@@ -12,12 +12,18 @@ import {
   XCircle,
   FileText,
   Loader2,
-  LogIn,
+  Sparkles,
+  User,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function ContributePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('upload'); // 'upload', 'my-uploads', 'my-corrections'
+
+  // Contributor info (for unauthenticated users)
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
 
   // Form states
   const [departments, setDepartments] = useState([]);
@@ -74,7 +80,6 @@ export default function ContributePage() {
       try {
         const res = await api.getDepartmentById(selectedDeptId);
         setSelectedDept(res.department);
-        // Default to first course in selected semester
         const activeCourses = res.department.programs?.[0]?.semesters?.find(
           (s) => s.semester_number === parseInt(selectedSemester, 10)
         )?.courses;
@@ -90,7 +95,7 @@ export default function ContributePage() {
     fetchDeptDetail();
   }, [selectedDeptId, selectedSemester]);
 
-  // Fetch User History
+  // Fetch User History if logged in
   useEffect(() => {
     if (!user) return;
     async function loadUserRecords() {
@@ -133,7 +138,7 @@ export default function ContributePage() {
       formData.append('departmentId', selectedDeptId);
       formData.append('courseId', selectedCourseId);
       if (selectedSessionId) formData.append('universitySessionId', selectedSessionId);
-      formData.append('examSessionId', examYear === '2025' ? '2025' : '2024'); // mapped by label in controller
+      formData.append('examSessionId', examYear);
       formData.append('examTypeId', examType);
       if (examType === 'CT') {
         formData.append('ctNumber', ctNumber);
@@ -143,19 +148,24 @@ export default function ContributePage() {
       formData.append('description', description.trim() || '');
       formData.append('file', file);
 
+      if (!user) {
+        formData.append('contributorName', guestName.trim() || 'NSTU Student');
+        formData.append('contributorEmail', guestEmail.trim() || 'student@nstu.edu.bd');
+      }
+
       const res = await api.submitUpload(formData);
 
       if (res.status === 'published') {
         setFeedback({
           type: 'success',
           message: 'Question paper verified and automatically published!',
-          details: 'Your submission passed all duplicate and security checks and is now publicly live in the question bank.',
+          details: 'Your submission passed all duplicate and security checks and is now publicly live in the question bank. Thank you for contributing!',
         });
       } else {
         setFeedback({
           type: 'warning',
-          message: 'Submission queued for Administrator Review (Duplicate Signal Flagged)',
-          details: res.reason || 'A matching paper or file already exists. An admin will review it to prevent redundant entries.',
+          message: 'Submission queued for Review (Duplicate Flagged)',
+          details: res.reason || 'A matching question paper or identical file already exists. It will be reviewed to avoid duplication.',
         });
       }
 
@@ -171,30 +181,6 @@ export default function ContributePage() {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-6">
-        <div className="w-16 h-16 rounded-3xl mx-auto bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-glass-glow">
-          <LogIn className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-white">Sign In to Contribute Exam Papers</h2>
-        <p className="text-slate-300 text-sm leading-relaxed">
-          To maintain high academic standards, only authenticated students with verified{' '}
-          <span className="text-cyan-300 font-semibold">@nstu.edu.bd</span> EduMail can upload questions or
-          request corrections.
-        </p>
-        <div>
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold text-sm shadow-glass-glow transition-all"
-          >
-            <span>Sign In with NSTU EduMail</span>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Title & Tabs */}
@@ -202,9 +188,12 @@ export default function ContributePage() {
         <div>
           <div className="inline-flex items-center gap-1.5 text-xs text-cyan-400 font-semibold uppercase tracking-wider mb-1">
             <UploadCloud className="w-4 h-4" />
-            <span>Contributor Portal</span>
+            <span>Open Academic Contribution</span>
           </div>
           <h1 className="text-3xl font-extrabold text-white">Contribute Question Papers</h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Any student or teacher can upload questions for any department. No admin account required.
+          </p>
         </div>
 
         {/* Tab Switcher */}
@@ -217,33 +206,58 @@ export default function ContributePage() {
           >
             Submit Paper
           </button>
-          <button
-            onClick={() => setActiveTab('my-uploads')}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'my-uploads' ? 'bg-cyan-500 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            My Submissions ({myUploads.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('my-corrections')}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'my-corrections' ? 'bg-cyan-500 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            My Corrections ({myCorrections.length})
-          </button>
+          {user && (
+            <>
+              <button
+                onClick={() => setActiveTab('my-uploads')}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                  activeTab === 'my-uploads' ? 'bg-cyan-500 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                My Submissions ({myUploads.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('my-corrections')}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                  activeTab === 'my-corrections' ? 'bg-cyan-500 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                My Corrections ({myCorrections.length})
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* TAB 1: SUBMIT QUESTION PAPER */}
       {activeTab === 'upload' && (
         <div className="rounded-3xl glass-panel border border-cyan-400/30 p-6 sm:p-8 bg-gradient-to-b from-[#0c193b]/90 to-[#070e24]/90 shadow-2xl space-y-6">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-white">Upload Examination Paper</h2>
-            <p className="text-xs text-slate-400">
-              Department-neutral: You can submit questions for any department at NSTU.
-            </p>
+          {/* Contributor Notice Badge */}
+          <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">
+                  {user ? `Signed in as: ${user.display_name} (${user.email})` : 'Open Contribution: Any User Can Contribute!'}
+                </p>
+                <p className="text-[11px] text-cyan-300/80">
+                  {user
+                    ? 'Verified contributor profile linked to your submission.'
+                    : 'You do not need to be an admin. Valid new submissions are auto-published to the question bank!'}
+                </p>
+              </div>
+            </div>
+
+            {!user && (
+              <Link
+                to="/login"
+                className="px-3 py-1.5 rounded-xl glass-pill text-xs font-semibold text-slate-300 hover:text-white hover:border-cyan-400/50"
+              >
+                Sign In with EduMail (Optional)
+              </Link>
+            )}
           </div>
 
           {/* Feedback Banner */}
@@ -268,10 +282,43 @@ export default function ContributePage() {
           )}
 
           <form onSubmit={handleUploadSubmit} className="space-y-6">
+            {/* If Guest: Contributor details fields */}
+            {!user && (
+              <div className="p-4 rounded-2xl glass-card grid grid-cols-1 md:grid-cols-2 gap-4 border-cyan-500/20">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Your Name (or Nickname) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. NSTUian Student"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Your Email (NSTU EduMail or Personal) *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. student@nstu.edu.bd"
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Department */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Department *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Department *</label>
                 <select
                   value={selectedDeptId}
                   onChange={(e) => setSelectedDeptId(e.target.value)}
@@ -288,7 +335,7 @@ export default function ContributePage() {
               {/* Admission Session */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  University Admission Session
+                  University Admission Session (Optional)
                 </label>
                 <select
                   value={selectedSessionId}
@@ -365,7 +412,7 @@ export default function ContributePage() {
 
               {/* Examination Year */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Examination Year/Session *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Examination Year / Session *</label>
                 <select
                   value={examYear}
                   onChange={(e) => setExamYear(e.target.value)}
@@ -483,7 +530,7 @@ export default function ContributePage() {
                 {submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Validating & Hashing File (SHA-256)...</span>
+                    <span>Validating & Publishing Question Paper...</span>
                   </>
                 ) : (
                   <>
@@ -497,15 +544,15 @@ export default function ContributePage() {
         </div>
       )}
 
-      {/* TAB 2: MY SUBMISSIONS */}
-      {activeTab === 'my-uploads' && (
+      {/* TAB 2: MY SUBMISSIONS (FOR LOGGED IN USERS) */}
+      {activeTab === 'my-uploads' && user && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-white">Your Question Uploads</h2>
           {loadingHistory ? (
             <div className="p-8 text-center text-slate-400 text-xs">Loading submission history...</div>
           ) : myUploads.length === 0 ? (
             <div className="p-8 text-center rounded-2xl glass-card text-slate-400 text-xs">
-              You haven't uploaded any question papers yet.
+              You haven't uploaded any question papers under this account yet.
             </div>
           ) : (
             <div className="space-y-3">
@@ -550,15 +597,15 @@ export default function ContributePage() {
         </div>
       )}
 
-      {/* TAB 3: MY CORRECTIONS */}
-      {activeTab === 'my-corrections' && (
+      {/* TAB 3: MY CORRECTIONS (FOR LOGGED IN USERS) */}
+      {activeTab === 'my-corrections' && user && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-white">Your Requested Corrections</h2>
           {loadingHistory ? (
             <div className="p-8 text-center text-slate-400 text-xs">Loading correction requests...</div>
           ) : myCorrections.length === 0 ? (
             <div className="p-8 text-center rounded-2xl glass-card text-slate-400 text-xs">
-              No correction requests found.
+              No correction requests found under this account.
             </div>
           ) : (
             <div className="space-y-3">

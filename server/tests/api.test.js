@@ -208,6 +208,28 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.reason).toBeDefined();
     });
 
+    it('Allows any public student/user to contribute questions without authentication', async () => {
+      const uniquePdf = `%PDF-1.4 Public Contributor Paper ${Date.now()}`;
+      const res = await request(app)
+        .post('/api/v1/uploads')
+        .field('departmentId', deptId)
+        .field('courseId', courseId)
+        .field('examSessionId', '2025')
+        .field('examTypeId', 'CT')
+        .field('ctNumber', 2)
+        .field('setName', 'PublicTest')
+        .field('title', 'Guest Student Contributed Paper')
+        .field('contributorName', 'Open NSTU Contributor')
+        .field('contributorEmail', 'guest.contributor@nstu.edu.bd')
+        .attach('file', Buffer.from(uniquePdf), 'Guest_CT2_SetPublic.pdf');
+
+      expect([201, 202]).toContain(res.status);
+      if (res.status === 201) {
+        expect(res.body.status).toBe('published');
+        expect(res.body.question).toBeDefined();
+      }
+    });
+
     it('Allows student to submit correction request for an existing question (BR-04)', async () => {
       // Find a published question
       const deptRes = await request(app).get('/api/v1/departments/25');

@@ -15,6 +15,24 @@ export async function submitCorrectionRequest(req, res) {
       return res.status(404).json({ error: 'Not Found', message: 'Question paper not found.' });
     }
 
+    let contributorUser = req.user;
+    if (!contributorUser) {
+      const email = (validated.contributorEmail || 'student.contributor@nstu.edu.bd').toLowerCase();
+      const displayName = validated.contributorName || 'NSTU Student';
+
+      contributorUser = await prisma.user.upsert({
+        where: { email },
+        update: { display_name: displayName },
+        create: {
+          email,
+          display_name: displayName,
+          email_verified_at: new Date(),
+          account_status: 'ACTIVE',
+          auth_provider: 'PUBLIC_CONTRIBUTOR',
+        },
+      });
+    }
+
     let proposedStorageKey = null;
     let proposedFilename = null;
     let proposedMimeType = null;
@@ -32,7 +50,7 @@ export async function submitCorrectionRequest(req, res) {
     const correction = await prisma.correctionRequest.create({
       data: {
         question_paper_id: question.id,
-        requested_by: req.user.id,
+        requested_by: contributorUser.id,
         description: validated.description,
         proposed_storage_key: proposedStorageKey,
         proposed_filename: proposedFilename,
@@ -45,7 +63,7 @@ export async function submitCorrectionRequest(req, res) {
 
     await prisma.auditLog.create({
       data: {
-        actor_user_id: req.user.id,
+        actor_user_id: contributorUser.id,
         action: 'CORRECTION_REQUESTED',
         entity_type: 'CORRECTION_REQUEST',
         entity_id: correction.id,
@@ -72,6 +90,9 @@ export async function submitCorrectionRequest(req, res) {
 
 export async function getMyCorrections(req, res) {
   try {
+    if (!req.user) {
+      return res.json({ corrections: [] });
+    }
     const corrections = await prisma.correctionRequest.findMany({
       where: { requested_by: req.user.id },
       include: {

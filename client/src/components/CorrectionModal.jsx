@@ -2,40 +2,17 @@ import React, { useState } from 'react';
 import { X, UploadCloud, AlertCircle, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
 
 export default function CorrectionModal({ question, onClose, onSuccess }) {
   const { user } = useAuth();
   const [description, setDescription] = useState('');
   const [file, setFile] = useState(null);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   if (!question) return null;
-
-  if (!user) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-        <div className="relative w-full max-w-md glass-panel rounded-3xl p-6 text-center space-y-4 border border-cyan-400/30">
-          <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
-          <AlertCircle className="w-10 h-10 text-amber-400 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Sign In Required</h3>
-          <p className="text-xs text-slate-300">
-            You must be signed in with your verified NSTU EduMail to request corrections or propose replacement files.
-          </p>
-          <Link
-            to="/login"
-            onClick={onClose}
-            className="inline-block w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-xs font-semibold"
-          >
-            Sign In with EduMail
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,6 +30,10 @@ export default function CorrectionModal({ question, onClose, onSuccess }) {
       formData.append('description', description.trim());
       if (file) {
         formData.append('file', file);
+      }
+      if (!user) {
+        formData.append('contributorName', guestName.trim() || 'NSTU Student');
+        formData.append('contributorEmail', guestEmail.trim() || 'student@nstu.edu.bd');
       }
 
       await api.submitCorrection(formData);
@@ -79,10 +60,10 @@ export default function CorrectionModal({ question, onClose, onSuccess }) {
         </p>
 
         <div className="mt-4 p-3 rounded-xl bg-blue-950/60 border border-blue-500/20 text-xs text-slate-300 space-y-1">
-          <p className="font-semibold text-cyan-300">Important Policy (BR-04 & BR-12):</p>
+          <p className="font-semibold text-cyan-300">Open Correction Submission:</p>
           <p>
-            The live question paper remains published and unchanged while your proposed correction is reviewed by the
-            department administrator.
+            Any user can flag errors or upload clearer replacement files. The current live question paper remains available
+            while your submission is reviewed by department moderation.
           </p>
         </div>
 
@@ -93,6 +74,31 @@ export default function CorrectionModal({ question, onClose, onSuccess }) {
         )}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          {!user && (
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">Your Name</label>
+                <input
+                  type="text"
+                  placeholder="NSTUian Student"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  className="w-full p-2 rounded-lg glass-input text-white text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">Your Email</label>
+                <input
+                  type="email"
+                  placeholder="student@nstu.edu.bd"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  className="w-full p-2 rounded-lg glass-input text-white text-xs"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
               Explanation of Error / Discrepancy *
@@ -102,7 +108,7 @@ export default function CorrectionModal({ question, onClose, onSuccess }) {
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Page 2 is blurry or missing questions 4 and 5; or incorrect semester tagged..."
+              placeholder="e.g. Page 2 is blurry or missing question 3; or incorrect exam year tagged..."
               className="w-full p-3 rounded-xl glass-input text-white text-xs placeholder-slate-400"
             />
           </div>
@@ -136,7 +142,7 @@ export default function CorrectionModal({ question, onClose, onSuccess }) {
               className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold shadow-glass-glow disabled:opacity-50"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>Submit Request</span>
+              <span>Submit Correction</span>
             </button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, UserPlus, Shield, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { LogIn, UserPlus, Shield, Sparkles, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -58,26 +58,38 @@ export default function LoginPage() {
         <div className="w-16 h-16 rounded-3xl mx-auto p-1 glass-card border border-cyan-400/50 shadow-glass-glow flex items-center justify-center bg-blue-950/80">
           <img src="/iit-crest.jpeg" alt="NSTU" className="w-full h-full object-contain" />
         </div>
-        <h1 className="text-2xl font-extrabold text-white">Hello NSTUian</h1>
+        <h1 className="text-2xl font-extrabold text-white">Hello NSTUian Account</h1>
         <p className="text-xs text-slate-400">
-          Sign in with your verified NSTU EduMail to contribute and manage examination papers.
+          Sign in or register to track your uploads and access personal contribution history.
         </p>
+      </div>
+
+      {/* Helpful Clarification Banner */}
+      <div className="p-3.5 rounded-2xl bg-cyan-950/50 border border-cyan-500/30 flex items-start gap-2.5 text-xs text-cyan-200">
+        <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <span>
+          <strong>Open Contribution:</strong> Any student can contribute questions directly on the{' '}
+          <a href="/contribute" className="underline font-bold text-white">
+            Contribute Page
+          </a>{' '}
+          without needing an administrative account!
+        </span>
       </div>
 
       {/* Quick Demo Login Credentials Bar */}
       <div className="rounded-2xl glass-card p-4 border border-cyan-500/30 space-y-2 bg-gradient-to-r from-blue-950/60 to-cyan-950/40">
         <div className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-300 uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Quick Testing Roles (1-Click Sign In)</span>
+          <span>Quick Testing Roles (1-Click Switch)</span>
         </div>
         <div className="grid grid-cols-1 gap-2 pt-1">
           <button
             type="button"
-            onClick={() => handleQuickLogin('superadmin@nstu.edu.bd', 'NstuAdmin@2026')}
-            className="w-full py-1.5 px-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
+            onClick={() => handleQuickLogin('ash2325006m@nstu.edu.bd', 'Student@2026')}
+            className="w-full py-2 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
           >
-            <span>👑 Super Admin</span>
-            <span className="font-mono text-[10px] text-purple-300">Global Access</span>
+            <span>🎓 Student Contributor (Regular User)</span>
+            <span className="font-mono text-[10px] text-emerald-300">Any Student</span>
           </button>
 
           <button
@@ -86,16 +98,16 @@ export default function LoginPage() {
             className="w-full py-1.5 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
           >
             <span>🛡️ IIT Dept Admin</span>
-            <span className="font-mono text-[10px] text-cyan-300">Dept 25 Scoped</span>
+            <span className="font-mono text-[10px] text-cyan-300">Dept 25 Moderator</span>
           </button>
 
           <button
             type="button"
-            onClick={() => handleQuickLogin('ash2325006m@nstu.edu.bd', 'Student@2026')}
-            className="w-full py-1.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
+            onClick={() => handleQuickLogin('superadmin@nstu.edu.bd', 'NstuAdmin@2026')}
+            className="w-full py-1.5 px-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
           >
-            <span>🎓 Student Contributor</span>
-            <span className="font-mono text-[10px] text-emerald-300">Verified EduMail</span>
+            <span>👑 Super Admin</span>
+            <span className="font-mono text-[10px] text-purple-300">Global Admin</span>
           </button>
         </div>
       </div>
@@ -126,7 +138,7 @@ export default function LoginPage() {
               isRegister ? 'bg-cyan-500 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
             }`}
           >
-            Register EduMail
+            Create Account
           </button>
         </div>
 
@@ -169,7 +181,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Official NSTU EduMail *
+              NSTU EduMail *
             </label>
             <input
               type="email"
@@ -201,7 +213,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-glass-glow disabled:opacity-50 transition-all cursor-pointer mt-2"
           >
-            {loading ? 'Processing...' : isRegister ? 'Create Verified Contributor Account' : 'Sign In'}
+            {loading ? 'Processing...' : isRegister ? 'Create Contributor Account' : 'Sign In'}
           </button>
         </form>
       </div>

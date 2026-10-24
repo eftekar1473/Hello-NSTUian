@@ -23,20 +23,24 @@ export const loginSchema = z.object({
 });
 
 export const uploadQuestionSchema = z.object({
-  departmentId: z.string().uuid('Invalid Department ID'),
-  courseId: z.string().uuid('Invalid Course ID'),
-  universitySessionId: z.string().uuid('Invalid University Session ID').optional().nullable(),
-  examSessionId: z.string().uuid('Invalid Exam Session ID'),
-  examTypeId: z.string().uuid('Invalid Exam Type ID'),
+  departmentId: z.string().min(1, 'Department is required'),
+  courseId: z.string().min(1, 'Course is required'),
+  universitySessionId: z.string().optional().nullable(),
+  examSessionId: z.string().min(1, 'Exam Session / Year is required'),
+  examTypeId: z.string().min(1, 'Exam Type is required'),
   ctNumber: z.coerce.number().int().min(1).max(10).optional().nullable(),
   setName: z.string().max(20).optional().nullable(),
   title: z.string().max(200).optional().nullable(),
   description: z.string().max(1000).optional().nullable(),
+  contributorName: z.string().optional().nullable(),
+  contributorEmail: z.string().email().optional().nullable(),
 });
 
 export const correctionRequestSchema = z.object({
-  questionPaperId: z.string().uuid('Invalid Question Paper ID'),
+  questionPaperId: z.string().min(1, 'Invalid Question Paper ID'),
   description: z.string().min(10, 'Please describe what needs correction in detail (minimum 10 characters)'),
+  contributorName: z.string().optional().nullable(),
+  contributorEmail: z.string().email().optional().nullable(),
 });
 
 export const reviewRequestSchema = z.object({
@@ -46,7 +50,7 @@ export const reviewRequestSchema = z.object({
 });
 
 export const assignAdminSchema = z.object({
-  userId: z.string().uuid('Invalid User ID'),
+  userId: z.string().min(1, 'Invalid User ID'),
   role: z.enum(['SUPER_ADMIN', 'DEPARTMENT_ADMIN']),
-  departmentId: z.string().uuid('Invalid Department ID').optional().nullable(),
+  departmentId: z.string().optional().nullable(),
 });

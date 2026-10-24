@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { submitCorrectionRequest, getMyCorrections } from './correction.controller.js';
-import { authenticateToken, requireEduMail } from '../../middleware/auth.js';
+import { optionalAuth, authenticateToken } from '../../middleware/auth.js';
 import { uploadMiddleware } from '../../services/storage.js';
 
 const router = Router();
 
+// ANY user can request corrections! Optional auth captures profile if logged in
 router.post(
   '/',
-  authenticateToken,
-  requireEduMail,
+  optionalAuth,
   uploadMiddleware.single('file'),
   submitCorrectionRequest
 );
