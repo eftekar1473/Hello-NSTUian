@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, getDownloadUrl } from '../services/api';
 import {
   FileText,
   Download,
@@ -246,7 +246,7 @@ export default function CourseDetailPage() {
                     </button>
 
                     <a
-                      href={`/api/v1/questions/${q.id}/download`}
+                      href={getDownloadUrl(q.id)}
                       download
                       className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-semibold text-white shadow-glass-glow transition-all"
                     >

@@ -1,4 +1,9 @@
-const API_BASE = '/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || '';
+export const API_BASE = `${API_URL}/api/v1`;
+
+export function getDownloadUrl(questionId) {
+  return `${API_BASE}/questions/${questionId}/download`;
+}
 
 export function getAuthToken() {
   return localStorage.getItem('hello_nstu_token');

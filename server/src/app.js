@@ -3,6 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 import authRouter from './modules/auth/auth.router.js';
 import departmentRouter from './modules/departments/department.router.js';
@@ -10,6 +13,10 @@ import questionRouter from './modules/questions/question.router.js';
 import uploadRouter from './modules/uploads/upload.router.js';
 import correctionRouter from './modules/corrections/correction.router.js';
 import adminRouter from './modules/admin/admin.router.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
 
 export const app = express();
 
@@ -57,7 +64,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Hello NSTUian API', timestamp: new Date() });
 });
 
-// 404 Handler
+// Serve frontend static assets if client build exists
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // Client-side SPA routing fallback
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// 404 Handler for unmatched API routes
 app.use((req, res) => {
   res.status(404).json({
     error: 'Not Found',

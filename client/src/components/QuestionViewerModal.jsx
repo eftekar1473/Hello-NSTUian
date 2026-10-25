@@ -1,11 +1,12 @@
 import React from 'react';
 import { X, Download, FileText, Calendar, User, History, Layers } from 'lucide-react';
+import { getDownloadUrl } from '../services/api';
 
 export default function QuestionViewerModal({ question, onClose }) {
   if (!question) return null;
 
   const latestVersion = question.versions?.[0];
-  const downloadUrl = `/api/v1/questions/${question.id}/download`;
+  const downloadUrl = getDownloadUrl(question.id);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">

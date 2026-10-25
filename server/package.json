@@ -11,6 +11,9 @@
     "prisma:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
     "prisma:push": "prisma db push --schema=./prisma/schema.prisma",
     "prisma:seed": "node prisma/seed.js",
+    "prisma:postgres:generate": "prisma generate --schema=./prisma/schema.postgresql.prisma",
+    "prisma:postgres:push": "prisma db push --schema=./prisma/schema.postgresql.prisma",
+    "prisma:postgres:migrate": "prisma migrate deploy --schema=./prisma/schema.postgresql.prisma",
     "test": "vitest run"
   },
   "dependencies": {
