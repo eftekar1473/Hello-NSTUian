@@ -2,7 +2,13 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 import { config } from '../config/index.js';
+
+export const supabaseClient =
+  config.supabase?.url && config.supabase?.serviceKey
+    ? createClient(config.supabase.url, config.supabase.serviceKey)
+    : null;
 
 // Ensure storage directories exist
 const uploadDir = config.storage.localDir;
@@ -59,10 +65,32 @@ export const uploadMiddleware = multer({
 });
 
 /**
- * Move file from temp to published official directory
+ * Move file from temp to published official directory (or upload to Supabase)
  */
-export async function moveToPublished(filename) {
+export async function moveToPublished(filename, mimeType = 'application/octet-stream') {
   const src = path.join(tempDir, filename);
+
+  if (config.storage.provider === 'supabase' && supabaseClient) {
+    try {
+      const storageKey = `published/${filename}`;
+      const fileBuffer = fs.readFileSync(src);
+      const { error } = await supabaseClient.storage
+        .from(config.supabase.bucket)
+        .upload(storageKey, fileBuffer, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (!error) {
+        if (fs.existsSync(src)) fs.unlinkSync(src);
+        return storageKey;
+      }
+      console.error('Supabase upload error:', error);
+    } catch (err) {
+      console.error('Supabase moveToPublished failure:', err);
+    }
+  }
+
   const dest = path.join(publishedDir, filename);
   if (fs.existsSync(src)) {
     fs.renameSync(src, dest);
@@ -72,16 +100,51 @@ export async function moveToPublished(filename) {
 }
 
 /**
- * Move file from temp to proposals directory
+ * Move file from temp to proposals directory (or upload to Supabase)
  */
-export async function moveToProposals(filename) {
+export async function moveToProposals(filename, mimeType = 'application/octet-stream') {
   const src = path.join(tempDir, filename);
+
+  if (config.storage.provider === 'supabase' && supabaseClient) {
+    try {
+      const storageKey = `proposals/${filename}`;
+      const fileBuffer = fs.readFileSync(src);
+      const { error } = await supabaseClient.storage
+        .from(config.supabase.bucket)
+        .upload(storageKey, fileBuffer, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (!error) {
+        if (fs.existsSync(src)) fs.unlinkSync(src);
+        return storageKey;
+      }
+      console.error('Supabase upload proposals error:', error);
+    } catch (err) {
+      console.error('Supabase moveToProposals failure:', err);
+    }
+  }
+
   const dest = path.join(proposalsDir, filename);
   if (fs.existsSync(src)) {
     fs.renameSync(src, dest);
     return path.join('proposals', filename).replace(/\\/g, '/');
   }
   return filename;
+}
+
+/**
+ * Retrieve public CDN URL from Supabase if configured
+ */
+export function getStoragePublicUrl(storageKey) {
+  if (config.storage.provider === 'supabase' && supabaseClient && storageKey) {
+    const { data } = supabaseClient.storage
+      .from(config.supabase.bucket)
+      .getPublicUrl(storageKey);
+    return data?.publicUrl || null;
+  }
+  return null;
 }
 
 /**

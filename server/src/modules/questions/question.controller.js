@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../../services/prisma.js';
-import { getStorageFilePath } from '../../services/storage.js';
+import { getStorageFilePath, getStoragePublicUrl } from '../../services/storage.js';
 
 export async function getQuestionsByCourse(req, res) {
   try {
@@ -97,6 +97,12 @@ export async function downloadQuestionFile(req, res) {
     const latestVersion = question.versions[0];
     if (!latestVersion) {
       return res.status(404).json({ error: 'Not Found', message: 'File version record not found.' });
+    }
+
+    // Check if hosted on Supabase Storage
+    const publicUrl = getStoragePublicUrl(latestVersion.storage_key);
+    if (publicUrl) {
+      return res.redirect(publicUrl);
     }
 
     // Check if it's a sample static file in client public
