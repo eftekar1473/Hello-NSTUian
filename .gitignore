@@ -23,9 +23,11 @@ lerna-debug.log*
 *.log
 
 # File uploads / storage (local temporary/development uploads)
-uploads/
-temp/
+/uploads/
+/temp/
+server/storage/
 storage/uploads/
+!server/src/modules/uploads/
 
 # OS generated
 .DS_Store
