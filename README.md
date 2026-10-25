@@ -90,17 +90,6 @@ All 16 tests execute and pass out-of-the-box.
 
 ---
 
-## 👥 Pre-Configured Demo Credentials
-
-The seed script creates ready-to-test accounts for every role. On the **Sign In** screen, you can also use the **1-Click Quick Testing Buttons**:
-
-| Role | Email | Password | Scope / Capabilities |
-|---|---|---|---|
-| **Super Admin** | `superadmin@nstu.edu.bd` | `NstuAdmin@2026` | Global authority across all NSTU departments, role assignment, audit logs |
-| **IIT Dept Admin** | `iitadmin@nstu.edu.bd` | `NstuAdmin@2026` | Manages Institute of Information Technology (Code 25), reviews IIT uploads/corrections |
-| **Verified Student** | `ash2325006m@nstu.edu.bd` | `Student@2026` | Verified IIT-23 contributor (ASH2325006M), can submit papers for any department |
-
----
 
 ## 📂 Project Structure
 
