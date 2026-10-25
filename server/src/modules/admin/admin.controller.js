@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { prisma } from '../../services/prisma.js';
 import { validateDepartmentScope } from '../../middleware/role.js';
 import { moveToPublished } from '../../services/storage.js';
@@ -468,5 +469,182 @@ export async function getAdminUsersList(req, res) {
     return res.json({ users: sanitized });
   } catch (err) {
     return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch users list.' });
+  }
+}
+
+export async function createDeptAdmin(req, res) {
+  try {
+    const { departmentId, email, roll, password, displayName } = req.body;
+
+    if (!departmentId || !email || !password) {
+      return res.status(400).json({ error: 'Bad Request', message: 'Department, EduMail, and Password are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const department = await prisma.department.findUnique({ where: { id: departmentId } });
+    if (!department) {
+      return res.status(404).json({ error: 'Not Found', message: 'Department not found.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    let user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (user) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password_hash: passwordHash,
+          student_id: roll ? roll.trim() : user.student_id,
+          display_name: displayName ? displayName.trim() : user.display_name,
+          email_verified_at: null, // Require verification by EduMail
+        },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email: cleanEmail,
+          password_hash: passwordHash,
+          student_id: roll ? roll.trim() : null,
+          display_name: displayName ? displayName.trim() : `${department.name} Admin`,
+          email_verified_at: null, // Require verification by EduMail
+          account_status: 'ACTIVE',
+          auth_provider: 'LOCAL',
+        },
+      });
+    }
+
+    // Upsert admin permission for this department
+    await prisma.adminPermission.upsert({
+      where: {
+        user_id_role_department_id: {
+          user_id: user.id,
+          role: 'DEPARTMENT_ADMIN',
+          department_id: departmentId,
+        },
+      },
+      update: {},
+      create: {
+        user_id: user.id,
+        role: 'DEPARTMENT_ADMIN',
+        department_id: departmentId,
+        assigned_by: req.user.id,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actor_user_id: req.user.id,
+        action: 'DEPT_ADMIN_ASSIGNED',
+        entity_type: 'ADMIN_PERMISSION',
+        entity_id: user.id,
+        department_id: departmentId,
+        details: JSON.stringify({ email: cleanEmail, roll, department: department.name }),
+      },
+    });
+
+    return res.status(201).json({
+      message: 'Department Admin configured successfully. Pending verification via their EduMail.',
+      user: {
+        id: user.id,
+        email: user.email,
+        student_id: user.student_id,
+        display_name: user.display_name,
+        is_verified: false,
+      },
+    });
+  } catch (err) {
+    console.error('createDeptAdmin error:', err);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to create department admin.' });
+  }
+}
+
+export async function getDeptAdminsList(req, res) {
+  try {
+    const permissions = await prisma.adminPermission.findMany({
+      where: { role: 'DEPARTMENT_ADMIN' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            display_name: true,
+            student_id: true,
+            email_verified_at: true,
+            account_status: true,
+            created_at: true,
+          },
+        },
+        department: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const admins = permissions.map((p) => ({
+      id: p.id,
+      user_id: p.user?.id,
+      email: p.user?.email,
+      display_name: p.user?.display_name,
+      roll: p.user?.student_id,
+      is_verified: !!p.user?.email_verified_at,
+      email_verified_at: p.user?.email_verified_at,
+      department: p.department,
+      created_at: p.created_at,
+    }));
+
+    return res.json({ admins });
+  } catch (err) {
+    console.error('getDeptAdminsList error:', err);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch department admins.' });
+  }
+}
+
+export async function verifyDeptAdmin(req, res) {
+  try {
+    const { email, roll } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Bad Request', message: 'EduMail is required for verification.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: { admin_permissions: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Not Found', message: 'No account registered with this EduMail.' });
+    }
+
+    const hasDeptRole = user.admin_permissions.some((p) => p.role === 'DEPARTMENT_ADMIN');
+    if (!hasDeptRole) {
+      return res.status(400).json({ error: 'Bad Request', message: 'This account is not designated as a Department Administrator.' });
+    }
+
+    if (roll && user.student_id && roll.trim().toLowerCase() !== user.student_id.trim().toLowerCase()) {
+      return res.status(400).json({ error: 'Bad Request', message: 'Student roll number does not match record.' });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { email_verified_at: new Date() },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actor_user_id: user.id,
+        action: 'DEPT_ADMIN_VERIFIED',
+        entity_type: 'USER',
+        entity_id: user.id,
+        details: JSON.stringify({ email: cleanEmail, roll: user.student_id }),
+      },
+    });
+
+    return res.json({
+      message: 'EduMail successfully verified! You can now log in using the password provided by Super Admin.',
+      verified: true,
+    });
+  } catch (err) {
+    console.error('verifyDeptAdmin error:', err);
+    return res.status(500).json({ error: 'Server Error', message: 'Verification failed.' });
   }
 }

@@ -59,6 +59,10 @@ app.use('/api/v1/uploads', uploadLimiter, uploadRouter);
 app.use('/api/v1/correction-requests', correctionRouter);
 app.use('/api/v1/admin', adminRouter);
 
+// Serve uploaded storage files & public assets
+app.use('/storage', express.static(path.resolve(__dirname, '../storage/uploads')));
+app.use(express.static(path.resolve(__dirname, '../../client/public')));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Hello NSTUian API', timestamp: new Date() });

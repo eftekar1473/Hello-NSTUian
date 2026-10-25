@@ -8,6 +8,11 @@ export default function QuestionViewerModal({ question, onClose }) {
   const latestVersion = question.versions?.[0];
   const downloadUrl = getDownloadUrl(question.id);
 
+  const isImage =
+    latestVersion?.mime_type?.startsWith('image/') ||
+    latestVersion?.original_filename?.match(/\.(jpe?g|png|webp)$/i) ||
+    latestVersion?.file_url?.match(/\.(jpe?g|png|webp)$/i);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
       <div className="relative w-full max-w-4xl max-h-[90vh] glass-panel rounded-3xl border border-cyan-400/30 shadow-2xl flex flex-col overflow-hidden bg-[#091124]/95">
@@ -48,12 +53,20 @@ export default function QuestionViewerModal({ question, onClose }) {
         {/* Preview & Details Body */}
         <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* File Preview Frame */}
-          <div className="lg:col-span-2 rounded-2xl border border-white/10 overflow-hidden bg-black/40 min-h-[380px] flex items-center justify-center relative">
-            <iframe
-              src={downloadUrl}
-              title="Question Paper Preview"
-              className="w-full h-full min-h-[450px] border-none"
-            />
+          <div className="lg:col-span-2 rounded-2xl border border-white/10 overflow-hidden bg-black/40 min-h-[380px] flex items-center justify-center relative p-3">
+            {isImage ? (
+              <img
+                src={downloadUrl}
+                alt={question.title || 'Question Paper Preview'}
+                className="max-h-[65vh] w-auto max-w-full object-contain rounded-xl shadow-2xl border border-white/10"
+              />
+            ) : (
+              <iframe
+                src={downloadUrl}
+                title="Question Paper Preview"
+                className="w-full h-full min-h-[450px] border-none"
+              />
+            )}
           </div>
 
           {/* Metadata Sidebar */}
@@ -98,29 +111,17 @@ export default function QuestionViewerModal({ question, onClose }) {
               </div>
             </div>
 
-            {/* Version History */}
-            <div className="p-4 rounded-2xl glass-card space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5" />
-                <span>Version History</span>
-              </h4>
-
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {question.versions?.map((v) => (
-                  <div key={v.id} className="p-2 rounded-xl bg-white/5 border border-white/5 text-xs">
-                    <div className="flex items-center justify-between font-semibold text-white">
-                      <span>Version {v.version_number}</span>
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(v.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-300 mt-1 line-clamp-2">
-                      {v.change_summary || 'Official verified release'}
-                    </p>
-                  </div>
-                ))}
+            {/* Description / Transcribed Questions */}
+            {question.description && (
+              <div className="p-4 rounded-2xl glass-card space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                  Question Paper Details
+                </h4>
+                <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                  {question.description}
+                </p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

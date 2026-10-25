@@ -105,26 +105,37 @@ export async function downloadQuestionFile(req, res) {
       return res.redirect(publicUrl);
     }
 
-    // Check if it's a sample static file in client public
-    if (latestVersion.storage_key.startsWith('samples/')) {
-      const samplePath = path.resolve(process.cwd(), '../client/public/samples/sample-exam-paper.pdf');
-      if (fs.existsSync(samplePath)) {
-        return res.download(samplePath, latestVersion.original_filename);
-      }
+    // Check storage locations
+    const uploadsPath = path.resolve(process.cwd(), 'storage/uploads', path.basename(latestVersion.storage_key));
+    const clientPublicPath = path.resolve(process.cwd(), '../client/public', latestVersion.storage_key.replace(/^samples\//, ''));
+    const directClientPublic = path.resolve(process.cwd(), '../client/public', path.basename(latestVersion.original_filename));
+    const clientRootPublic = path.resolve(process.cwd(), '../client/public', path.basename(latestVersion.storage_key));
+
+    let resolvedPath = null;
+    if (fs.existsSync(uploadsPath)) {
+      resolvedPath = uploadsPath;
+    } else if (fs.existsSync(clientRootPublic)) {
+      resolvedPath = clientRootPublic;
+    } else if (fs.existsSync(clientPublicPath)) {
+      resolvedPath = clientPublicPath;
+    } else if (fs.existsSync(directClientPublic)) {
+      resolvedPath = directClientPublic;
+    } else {
+      const fullPath = getStorageFilePath(latestVersion.storage_key);
+      if (fs.existsSync(fullPath)) resolvedPath = fullPath;
     }
 
-    const fullPath = getStorageFilePath(latestVersion.storage_key);
-    if (!fs.existsSync(fullPath)) {
-      // Fallback to sample if file not found locally
+    if (!resolvedPath) {
       const fallbackSample = path.resolve(process.cwd(), '../client/public/samples/sample-exam-paper.pdf');
-      if (fs.existsSync(fallbackSample)) {
-        return res.download(fallbackSample, latestVersion.original_filename);
-      }
+      if (fs.existsSync(fallbackSample)) resolvedPath = fallbackSample;
+    }
+
+    if (!resolvedPath || !fs.existsSync(resolvedPath)) {
       return res.status(404).json({ error: 'Not Found', message: 'Physical file not found on server.' });
     }
 
     res.setHeader('Content-Type', latestVersion.mime_type || 'application/octet-stream');
-    return res.download(fullPath, latestVersion.original_filename);
+    return res.sendFile(path.resolve(resolvedPath));
   } catch (err) {
     console.error('downloadQuestionFile error:', err);
     return res.status(500).json({ error: 'Server Error', message: 'Download failed.' });

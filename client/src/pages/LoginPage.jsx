@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, UserPlus, Shield, Sparkles, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { LogIn, UserPlus, Info, AlertCircle, Shield } from 'lucide-react';
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -37,30 +37,16 @@ export default function LoginPage() {
     }
   };
 
-  // Demo 1-Click Fast Logins
-  const handleQuickLogin = async (demoEmail, demoPassword) => {
-    setError('');
-    setLoading(true);
-    try {
-      await login(demoEmail, demoPassword);
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(err.message || 'Quick login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="max-w-md mx-auto px-4 py-12 space-y-6">
       {/* Brand Header */}
       <div className="text-center space-y-2">
         <div className="w-16 h-16 rounded-3xl mx-auto p-1 glass-card border border-cyan-400/50 shadow-glass-glow flex items-center justify-center bg-blue-950/80">
-          <img src="/iit-crest.jpeg" alt="NSTU" className="w-full h-full object-contain" />
+          <img src="/nstu-logo.png" alt="NSTU Logo" className="w-full h-full object-contain" />
         </div>
         <h1 className="text-2xl font-extrabold text-white">Hello NSTUian Account</h1>
         <p className="text-xs text-slate-400">
-          Sign in or register to track your uploads and access personal contribution history.
+          Sign in or register with your NSTU student email to track contributions.
         </p>
       </div>
 
@@ -69,47 +55,11 @@ export default function LoginPage() {
         <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
         <span>
           <strong>Open Contribution:</strong> Any student can contribute questions directly on the{' '}
-          <a href="/contribute" className="underline font-bold text-white">
+          <Link to="/contribute" className="underline font-bold text-white">
             Contribute Page
-          </a>{' '}
+          </Link>{' '}
           without needing an administrative account!
         </span>
-      </div>
-
-      {/* Quick Demo Login Credentials Bar */}
-      <div className="rounded-2xl glass-card p-4 border border-cyan-500/30 space-y-2 bg-gradient-to-r from-blue-950/60 to-cyan-950/40">
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-300 uppercase tracking-wider">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Quick Testing Roles (1-Click Switch)</span>
-        </div>
-        <div className="grid grid-cols-1 gap-2 pt-1">
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('ash2325006m@nstu.edu.bd', 'Student@2026')}
-            className="w-full py-2 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
-          >
-            <span>🎓 Student Contributor (Regular User)</span>
-            <span className="font-mono text-[10px] text-emerald-300">Any Student</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('iitadmin@nstu.edu.bd', 'NstuAdmin@2026')}
-            className="w-full py-1.5 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
-          >
-            <span>🛡️ IIT Dept Admin</span>
-            <span className="font-mono text-[10px] text-cyan-300">Dept 25 Moderator</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('superadmin@nstu.edu.bd', 'NstuAdmin@2026')}
-            className="w-full py-1.5 px-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer"
-          >
-            <span>👑 Super Admin</span>
-            <span className="font-mono text-[10px] text-purple-300">Global Admin</span>
-          </button>
-        </div>
       </div>
 
       {/* Auth Card */}
@@ -157,7 +107,7 @@ export default function LoginPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Ashraful Islam"
+                  placeholder="e.g. Student Name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
@@ -166,11 +116,11 @@ export default function LoginPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  NSTU Student ID (Optional)
+                  NSTU Student ID / Roll (Optional)
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. ASH2325006M"
+                  placeholder="e.g. ABC0011222M"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400 font-mono"
@@ -186,13 +136,13 @@ export default function LoginPage() {
             <input
               type="email"
               required
-              placeholder="username@nstu.edu.bd"
+              placeholder="roll@student.nstu.edu.bd"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
             />
             {isRegister && (
-              <p className="text-[11px] text-cyan-400/80 mt-1">Must end with @nstu.edu.bd</p>
+              <p className="text-[11px] text-cyan-400/80 mt-1">Must end with @student.nstu.edu.bd</p>
             )}
           </div>
 
@@ -216,6 +166,16 @@ export default function LoginPage() {
             {loading ? 'Processing...' : isRegister ? 'Create Contributor Account' : 'Sign In'}
           </button>
         </form>
+      </div>
+
+      <div className="text-center pt-2">
+        <Link
+          to="/admin/login"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-cyan-400 transition-colors"
+        >
+          <Shield className="w-3.5 h-3.5 text-amber-400" />
+          <span>Department Administrator or Super Admin? Access Admin Portal</span>
+        </Link>
       </div>
     </div>
   );

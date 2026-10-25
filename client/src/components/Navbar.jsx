@@ -17,7 +17,7 @@ export default function Navbar({ onOpenSearch }) {
         {/* Brand Logo */}
         <Link to="/" className="flex items-center gap-3 group">
           <div className="relative w-10 h-10 rounded-xl overflow-hidden p-0.5 border border-cyan-400/40 shadow-glass-glow flex items-center justify-center bg-blue-950/80 group-hover:border-cyan-300 transition-all">
-            <img src="/iit-crest.jpeg" alt="NSTU Logo" className="w-full h-full object-contain" />
+            <img src="/nstu-logo.png" alt="NSTU Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">

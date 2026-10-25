@@ -44,7 +44,7 @@ Body:
 - `email`: string (must end with `@nstu.edu.bd`)
 - `password`: string (min 6 characters)
 - `displayName`: string
-- `studentId`: string (optional, e.g. `ASH2325006M`)
+- `studentId`: string (optional, e.g. `ABC0011222M`)
 Returns JWT bearer token and user profile.
 
 ### `POST /auth/login`

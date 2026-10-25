@@ -71,74 +71,105 @@ async function main() {
     examSessions[year] = record;
   }
 
-  // 4. Departments (Alphabetically sorted)
+  // 4. Departments (Explicitly ensuring Bangla, Math, English, Physics, Chemistry, and IIT)
   const departmentsData = [
     {
-      department_code: '01',
-      name: 'Applied Chemistry & Chemical Engineering',
-      abbreviation: 'ACCE',
-      description: 'Department of Applied Chemistry & Chemical Engineering',
+      department_code: '04',
+      name: 'Bangla',
+      abbreviation: 'BAN',
+      description: 'Department of Bangla Language and Literature at NSTU.',
+      icon_url: '/nstu-logo.png',
     },
     {
       department_code: '02',
-      name: 'Applied Mathematics',
-      abbreviation: 'AMATH',
-      description: 'Department of Applied Mathematics',
-    },
-    {
-      department_code: '05',
-      name: 'Biotechnology and Genetic Engineering',
-      abbreviation: 'BGE',
-      description: 'Department of Biotechnology and Genetic Engineering',
-    },
-    {
-      department_code: '11',
-      name: 'Computer Science & Telecommunication Engineering',
-      abbreviation: 'CSTE',
-      description: 'Department of Computer Science & Telecommunication Engineering',
-    },
-    {
-      department_code: '12',
-      name: 'Electrical & Electronic Engineering',
-      abbreviation: 'EEE',
-      description: 'Department of Electrical & Electronic Engineering',
+      name: 'Mathematics',
+      abbreviation: 'MATH',
+      description: 'Department of Mathematics at NSTU.',
+      icon_url: '/nstu-logo.png',
     },
     {
       department_code: '14',
       name: 'English',
       abbreviation: 'ENG',
-      description: 'Department of English Language & Literature',
+      description: 'Department of English Language & Literature at NSTU.',
+      icon_url: '/nstu-logo.png',
     },
     {
-      department_code: '15',
-      name: 'Fisheries & Marine Science',
-      abbreviation: 'FIMS',
-      description: 'Department of Fisheries & Marine Science',
+      department_code: '03',
+      name: 'Physics',
+      abbreviation: 'PHY',
+      description: 'Department of Physics at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '06',
+      name: 'Chemistry',
+      abbreviation: 'CHEM',
+      description: 'Department of Chemistry at NSTU.',
+      icon_url: '/nstu-logo.png',
     },
     {
       department_code: '25',
       name: 'Institute of Information Technology',
       abbreviation: 'IIT',
       description: 'Premier institute providing high-standard education in Information Technology and Software Engineering at NSTU.',
-      icon_url: '/iit-crest.jpeg',
+      icon_url: '/iit-card.jpg',
+    },
+    {
+      department_code: '01',
+      name: 'Applied Chemistry & Chemical Engineering',
+      abbreviation: 'ACCE',
+      description: 'Department of Applied Chemistry & Chemical Engineering',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '05',
+      name: 'Biotechnology and Genetic Engineering',
+      abbreviation: 'BGE',
+      description: 'Department of Biotechnology and Genetic Engineering',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '11',
+      name: 'Computer Science & Telecommunication Engineering',
+      abbreviation: 'CSTE',
+      description: 'Department of Computer Science & Telecommunication Engineering',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '12',
+      name: 'Electrical & Electronic Engineering',
+      abbreviation: 'EEE',
+      description: 'Department of Electrical & Electronic Engineering',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '15',
+      name: 'Fisheries & Marine Science',
+      abbreviation: 'FIMS',
+      description: 'Department of Fisheries & Marine Science',
+      icon_url: '/nstu-logo.png',
     },
     {
       department_code: '26',
       name: 'Microbiology',
       abbreviation: 'MICRO',
       description: 'Department of Microbiology',
+      icon_url: '/nstu-logo.png',
     },
     {
       department_code: '28',
       name: 'Pharmacy',
       abbreviation: 'PHARM',
       description: 'Department of Pharmacy',
+      icon_url: '/nstu-logo.png',
     },
     {
       department_code: '30',
       name: 'Software Engineering',
       abbreviation: 'SE',
       description: 'Department of Software Engineering',
+      icon_url: '/nstu-logo.png',
     },
   ];
 
@@ -154,6 +185,127 @@ async function main() {
 
   const iit = departments['25'];
 
+  // Helper to setup academic programs, 8 semesters, and sample courses
+  async function setupDepartmentCurriculum(dept, programCode, programName, sampleCoursesList) {
+    const prog = await prisma.academicProgram.upsert({
+      where: { id: `prog-${dept.department_code}` },
+      update: {},
+      create: {
+        id: `prog-${dept.department_code}`,
+        department_id: dept.id,
+        program_name: programName,
+        program_code: programCode,
+      },
+    });
+
+    const sems = {};
+    for (let i = 1; i <= 8; i++) {
+      sems[i] = await prisma.semester.upsert({
+        where: {
+          program_id_semester_number: {
+            program_id: prog.id,
+            semester_number: i,
+          },
+        },
+        update: {},
+        create: {
+          program_id: prog.id,
+          semester_number: i,
+          semester_name: `Semester ${i}`,
+        },
+      });
+    }
+
+    const createdCourses = {};
+    for (const c of sampleCoursesList) {
+      const crs = await prisma.course.upsert({
+        where: {
+          program_id_course_code: {
+            program_id: prog.id,
+            course_code: c.course_code,
+          },
+        },
+        update: {},
+        create: {
+          program_id: prog.id,
+          semester_id: sems[c.semester].id,
+          course_code: c.course_code,
+          course_title: c.course_title,
+          credit: c.credit || 3.0,
+        },
+      });
+      createdCourses[c.course_code] = crs;
+    }
+
+    return { program: prog, semesters: sems, courses: createdCourses };
+  }
+
+  // Setup curriculum for Bangla, Math, English, Physics, Chemistry
+  await setupDepartmentCurriculum(
+    departments['04'],
+    'BA-BAN',
+    'Bachelor of Arts in Bangla',
+    [
+      { semester: 1, course_code: 'BAN 1101', course_title: 'History of Bangla Literature (Ancient & Medieval)' },
+      { semester: 1, course_code: 'BAN 1102', course_title: 'Bangla Poetry & Drama' },
+      { semester: 2, course_code: 'BAN 1201', course_title: 'Bangla Novel and Short Story' },
+      { semester: 3, course_code: 'BAN 2101', course_title: 'Bengali Linguistics & Phonetics' },
+      { semester: 4, course_code: 'BAN 2201', course_title: 'Bangla Essays & Literary Criticism' },
+    ]
+  );
+
+  await setupDepartmentCurriculum(
+    departments['02'],
+    'BS-MATH',
+    'Bachelor of Science in Mathematics',
+    [
+      { semester: 1, course_code: 'MATH 1101', course_title: 'Calculus I & Analytical Geometry' },
+      { semester: 1, course_code: 'MATH 1102', course_title: 'Fundamental Mathematics & Algebra' },
+      { semester: 2, course_code: 'MATH 1201', course_title: 'Linear Algebra & Vector Analysis' },
+      { semester: 3, course_code: 'MATH 2101', course_title: 'Ordinary Differential Equations' },
+      { semester: 4, course_code: 'MATH 2201', course_title: 'Numerical Analysis & Programming' },
+    ]
+  );
+
+  await setupDepartmentCurriculum(
+    departments['14'],
+    'BA-ENG',
+    'Bachelor of Arts in English',
+    [
+      { semester: 1, course_code: 'ENG 1101', course_title: 'Introduction to Poetry and Drama' },
+      { semester: 1, course_code: 'ENG 1102', course_title: 'English Reading and Writing Skills' },
+      { semester: 2, course_code: 'ENG 1201', course_title: '16th and 17th Century Literature' },
+      { semester: 3, course_code: 'ENG 2101', course_title: 'Romantic and Victorian Literature' },
+      { semester: 4, course_code: 'ENG 2201', course_title: 'Modern and Contemporary English Literature' },
+    ]
+  );
+
+  await setupDepartmentCurriculum(
+    departments['03'],
+    'BS-PHY',
+    'Bachelor of Science in Physics',
+    [
+      { semester: 1, course_code: 'PHY 1101', course_title: 'Mechanics, Properties of Matter & Waves' },
+      { semester: 1, course_code: 'PHY 1102', course_title: 'Thermal Physics and Thermodynamics' },
+      { semester: 2, course_code: 'PHY 1201', course_title: 'Electricity, Magnetism and Optics' },
+      { semester: 3, course_code: 'PHY 2101', course_title: 'Modern Physics & Quantum Mechanics' },
+      { semester: 4, course_code: 'PHY 2201', course_title: 'Solid State Physics & Electronics' },
+    ]
+  );
+
+  await setupDepartmentCurriculum(
+    departments['06'],
+    'BS-CHEM',
+    'Bachelor of Science in Chemistry',
+    [
+      { semester: 1, course_code: 'CHEM 1101', course_title: 'General & Inorganic Chemistry I' },
+      { semester: 1, course_code: 'CHEM 1102', course_title: 'Physical Chemistry I' },
+      { semester: 2, course_code: 'CHEM 1201', course_title: 'Organic Chemistry I' },
+      { semester: 3, course_code: 'CHEM 2101', course_title: 'Inorganic Chemistry II & Coordination Chemistry' },
+      { semester: 4, course_code: 'CHEM 2201', course_title: 'Analytical Chemistry & Spectroscopy' },
+    ]
+  );
+
   // 5. Academic Program for IIT
   const bsitProgram = await prisma.academicProgram.upsert({
     where: { id: 'bsit-program-iit' },
@@ -166,7 +318,7 @@ async function main() {
     },
   });
 
-  // 6. Semesters (1 to 8)
+  // 6. Semesters for IIT (1 to 8)
   const semesters = {};
   for (let i = 1; i <= 8; i++) {
     const sem = await prisma.semester.upsert({
@@ -305,14 +457,32 @@ async function main() {
     },
   });
 
-  // Verified Contributor
+  // Student Contributor (ABC0011222M / @student.nstu.edu.bd)
   const student = await prisma.user.upsert({
+    where: { email: 'abc0011222m@student.nstu.edu.bd' },
+    update: {
+      student_id: 'ABC0011222M',
+      display_name: 'NSTU Contributor (ABC0011222M)',
+    },
+    create: {
+      email: 'abc0011222m@student.nstu.edu.bd',
+      display_name: 'NSTU Contributor (ABC0011222M)',
+      student_id: 'ABC0011222M',
+      password_hash: studentPasswordHash,
+      email_verified_at: new Date(),
+      account_status: 'ACTIVE',
+      auth_provider: 'LOCAL',
+    },
+  });
+
+  // Also maintain alias for test backward compatibility
+  await prisma.user.upsert({
     where: { email: 'ash2325006m@nstu.edu.bd' },
-    update: {},
+    update: { student_id: 'ABC0011222M' },
     create: {
       email: 'ash2325006m@nstu.edu.bd',
-      display_name: 'Ashraful Islam (IIT-23)',
-      student_id: 'ASH2325006M',
+      display_name: 'NSTU Contributor (ABC0011222M)',
+      student_id: 'ABC0011222M',
       password_hash: studentPasswordHash,
       email_verified_at: new Date(),
       account_status: 'ACTIVE',
@@ -322,12 +492,17 @@ async function main() {
 
   // 9. Sample Question Papers & Initial Versions
   const dbmsCourse = courses['IIT 2101'];
+  const seCourse = courses['IIT 3101'];
   const session2223 = sessions['2022-2023'];
+  const session2324 = sessions['2023-2024'];
   const examYear2024 = examSessions['2024'];
 
-  // CT-1 Set A Question Paper
-  const qp1 = await prisma.questionPaper.create({
-    data: {
+  // CT-1 Set A Question Paper (DBMS)
+  const qp1 = await prisma.questionPaper.upsert({
+    where: { id: 'qp-iit-dbms-ct1' },
+    update: {},
+    create: {
+      id: 'qp-iit-dbms-ct1',
       department_id: iit.id,
       course_id: dbmsCourse.id,
       university_session_id: session2223.id,
@@ -342,8 +517,11 @@ async function main() {
     },
   });
 
-  const v1 = await prisma.questionPaperVersion.create({
-    data: {
+  const v1 = await prisma.questionPaperVersion.upsert({
+    where: { id: 'ver-iit-dbms-ct1' },
+    update: {},
+    create: {
+      id: 'ver-iit-dbms-ct1',
       question_paper_id: qp1.id,
       version_number: 1,
       storage_key: 'samples/iit_2101_ct1_setA_2024.pdf',
@@ -362,9 +540,61 @@ async function main() {
     data: { current_version_id: v1.id },
   });
 
+  // REQUIREMENT 4: Use 3rd image as a ques paper and create a full set for Institute of Information Technology
+  const qpIIT_CT1 = await prisma.questionPaper.upsert({
+    where: { id: 'qp-iit-se-ct1-fullset' },
+    update: {},
+    create: {
+      id: 'qp-iit-se-ct1-fullset',
+      department_id: iit.id,
+      course_id: seCourse.id,
+      university_session_id: session2324.id,
+      exam_session_id: examYear2024.id,
+      exam_type_id: ctType.id,
+      ct_number: 1,
+      set_name: 'Full Set',
+      title: 'Software Engineering - CT 1 (Full Set: Software Metrics)',
+      description: `CT-1 Full Examination Set:
+1. Define software metrics and describe their importance in evaluating the quality and progress of a software development project with examples.
+2. Why is measurement essential in software engineering? Discuss how it helps project managers and developers in making decisions.
+3. What do you understand by the Maintainability Index and Cyclomatic Complexity? Explain how they contribute to evaluating the quality of software code.
+4. What is measurement theory in the context of software engineering? Explain its importance.
+5. Differentiate between direct and derived measurements in software engineering. Explain how they are applied in practice.
+6. Why are measures of central tendency (mean, median, mode) and variability (range, variance, standard deviation) important in software metrics? Give examples of how they can be applied in evaluating software quality.`,
+      publication_status: 'published',
+      created_by: student.id,
+    },
+  });
+
+  const vIIT_CT1 = await prisma.questionPaperVersion.upsert({
+    where: { id: 'ver-iit-se-ct1-fullset' },
+    update: {},
+    create: {
+      id: 'ver-iit-se-ct1-fullset',
+      question_paper_id: qpIIT_CT1.id,
+      version_number: 1,
+      storage_key: 'uploads/iit-se-ct1-question.jpg',
+      file_url: '/iit-se-ct1-question.jpg',
+      original_filename: 'IIT3101_SoftwareEngineering_CT1_FullSet.jpg',
+      mime_type: 'image/jpeg',
+      file_size: 154200,
+      sha256_hash: '9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b',
+      created_by: student.id,
+      change_summary: 'CT-1 Full Set with complete software metrics questions',
+    },
+  });
+
+  await prisma.questionPaper.update({
+    where: { id: qpIIT_CT1.id },
+    data: { current_version_id: vIIT_CT1.id },
+  });
+
   // Semester Final Question Paper
-  const qp2 = await prisma.questionPaper.create({
-    data: {
+  const qp2 = await prisma.questionPaper.upsert({
+    where: { id: 'qp-iit-dbms-final' },
+    update: {},
+    create: {
+      id: 'qp-iit-dbms-final',
       department_id: iit.id,
       course_id: dbmsCourse.id,
       university_session_id: session2223.id,
@@ -377,8 +607,11 @@ async function main() {
     },
   });
 
-  const v2 = await prisma.questionPaperVersion.create({
-    data: {
+  const v2 = await prisma.questionPaperVersion.upsert({
+    where: { id: 'ver-iit-dbms-final' },
+    update: {},
+    create: {
+      id: 'ver-iit-dbms-final',
       question_paper_id: qp2.id,
       version_number: 1,
       storage_key: 'samples/iit_2101_final_2024.pdf',

@@ -65,7 +65,7 @@ AuditLog (N)
 - `email`: String (Unique, institutional `@nstu.edu.bd`)
 - `password_hash`: String
 - `display_name`: String
-- `student_id`: String? (e.g., `"ASH2325006M"`)
+- `student_id`: String? (e.g., `"ABC0011222M"`)
 - `email_verified_at`: DateTime?
 - `account_status`: String (`"ACTIVE"`, `"SUSPENDED"`, `"BLOCKED"`)
 

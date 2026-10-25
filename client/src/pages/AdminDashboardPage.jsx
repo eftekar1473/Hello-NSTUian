@@ -13,24 +13,48 @@ import {
   Loader2,
   Lock,
   ArrowRight,
+  Plus,
+  Upload,
+  Sparkles,
+  ExternalLink,
+  Building,
 } from 'lucide-react';
+import DepartmentCard from '../components/DepartmentCard';
 
 export default function AdminDashboardPage() {
   const { user, isAdmin, isSuperAdmin, isDeptAdmin } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('uploads'); // 'uploads', 'corrections', 'audit', 'users'
+  const [activeTab, setActiveTab] = useState('uploads'); // 'uploads', 'corrections', 'departments', 'dept-admins', 'audit', 'users'
   const [statsData, setStatsData] = useState(null);
   const [uploadsQueue, setUploadsQueue] = useState([]);
   const [correctionsQueue, setCorrectionsQueue] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [deptAdmins, setDeptAdmins] = useState([]);
 
   // Role Assignment State (Super Admin)
   const [targetUserId, setTargetUserId] = useState('');
   const [assignRole, setAssignRole] = useState('DEPARTMENT_ADMIN');
   const [assignDeptId, setAssignDeptId] = useState('');
   const [assignMessage, setAssignMessage] = useState('');
+
+  // Department Creation State
+  const [deptName, setDeptName] = useState('');
+  const [deptCode, setDeptCode] = useState('');
+  const [deptAbbr, setDeptAbbr] = useState('');
+  const [deptDesc, setDeptDesc] = useState('');
+  const [deptLogoFile, setDeptLogoFile] = useState(null);
+  const [deptLogoPreview, setDeptLogoPreview] = useState('/nstu-logo.png');
+  const [deptMessage, setDeptMessage] = useState('');
+
+  // Super Admin: Set Dept Admin State
+  const [newAdminDeptId, setNewAdminDeptId] = useState('');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminRoll, setNewAdminRoll] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [newAdminName, setNewAdminName] = useState('');
+  const [deptAdminMessage, setDeptAdminMessage] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -51,14 +75,20 @@ export default function AdminDashboardPage() {
       setAuditLogs(logs.logs || []);
       setDepartments(depts.departments || []);
 
+      if (depts.departments?.length > 0) {
+        setAssignDeptId(depts.departments[0].id);
+        setNewAdminDeptId(depts.departments[0].id);
+      }
+
       if (isSuperAdmin) {
-        const usersRes = await api.getAdminUsers();
+        const [usersRes, adminsRes] = await Promise.all([
+          api.getAdminUsers(),
+          api.getDeptAdmins().catch(() => ({ admins: [] })),
+        ]);
         setAdminUsers(usersRes.users || []);
+        setDeptAdmins(adminsRes.admins || []);
         if (usersRes.users?.length > 0) {
           setTargetUserId(usersRes.users[0].id);
-        }
-        if (depts.departments?.length > 0) {
-          setAssignDeptId(depts.departments[0].id);
         }
       }
     } catch (err) {
@@ -119,6 +149,79 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Create Department Handler
+  const handleCreateDepartment = async (e) => {
+    e.preventDefault();
+    setActionLoading(true);
+    setDeptMessage('');
+    try {
+      const formData = new FormData();
+      formData.append('name', deptName.trim());
+      formData.append('department_code', deptCode.trim());
+      if (deptAbbr) formData.append('abbreviation', deptAbbr.trim());
+      if (deptDesc) formData.append('description', deptDesc.trim());
+      if (deptLogoFile) {
+        formData.append('logo', deptLogoFile);
+      } else {
+        formData.append('icon_url', '/nstu-logo.png');
+      }
+
+      await api.createDepartment(formData);
+      setDeptMessage('Department created successfully! Defaulted to university logo if none provided.');
+      setDeptName('');
+      setDeptCode('');
+      setDeptAbbr('');
+      setDeptDesc('');
+      setDeptLogoFile(null);
+      setDeptLogoPreview('/nstu-logo.png');
+      await loadData();
+    } catch (err) {
+      setDeptMessage(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Set Dept Admin Handler (Super Admin)
+  const handleSetDeptAdmin = async (e) => {
+    e.preventDefault();
+    setActionLoading(true);
+    setDeptAdminMessage('');
+    try {
+      await api.createDeptAdmin({
+        departmentId: newAdminDeptId,
+        email: newAdminEmail.trim(),
+        roll: newAdminRoll.trim(),
+        password: newAdminPassword,
+        displayName: newAdminName.trim() || undefined,
+      });
+      setDeptAdminMessage('Department Admin configured! Account is pending verification via their EduMail.');
+      setNewAdminEmail('');
+      setNewAdminRoll('');
+      setNewAdminPassword('');
+      setNewAdminName('');
+      await loadData();
+    } catch (err) {
+      setDeptAdminMessage(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Fast verify dept admin (for testing / admin action)
+  const handleQuickVerifyAdmin = async (adminEmail, adminRoll) => {
+    setActionLoading(true);
+    try {
+      await api.verifyDeptAdmin({ email: adminEmail, roll: adminRoll });
+      alert(`EduMail ${adminEmail} verified successfully! They can now log in with the password given by Super Admin.`);
+      await loadData();
+    } catch (err) {
+      alert(`Verification error: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
@@ -174,6 +277,24 @@ export default function AdminDashboardPage() {
             Corrections ({correctionsQueue.length})
           </button>
           <button
+            onClick={() => setActiveTab('departments')}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer ${
+              activeTab === 'departments' ? 'bg-blue-600 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Manage Departments
+          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => setActiveTab('dept-admins')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer ${
+                activeTab === 'dept-admins' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Dept Admin Setup ({deptAdmins.length})
+            </button>
+          )}
+          <button
             onClick={() => setActiveTab('audit')}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer ${
               activeTab === 'audit' ? 'bg-cyan-500 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
@@ -188,7 +309,7 @@ export default function AdminDashboardPage() {
                 activeTab === 'users' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Role Assignments
+              Global Roles
             </button>
           )}
         </div>
@@ -210,7 +331,7 @@ export default function AdminDashboardPage() {
         </div>
         <div className="p-4 rounded-2xl glass-card">
           <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Active Departments</span>
-          <p className="text-2xl font-bold text-purple-400 mt-1">{statsData?.stats?.totalDepartments ?? 0}</p>
+          <p className="text-2xl font-bold text-purple-400 mt-1">{departments.length}</p>
         </div>
       </div>
 
@@ -363,7 +484,337 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* TAB 3: AUDIT TRAIL */}
+      {/* TAB 3: MANAGE DEPARTMENTS (Requirement 2) */}
+      {activeTab === 'departments' && (
+        <div className="space-y-8">
+          <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-blue-500/30 bg-[#0a142e]/90 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Building className="w-5 h-5 text-cyan-400" />
+                  <span>Create / Upload Department</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Upload the department logo and name to generate a futuristic glassmorphism department card. If no logo is provided, the university logo is automatically used as the default!
+                </p>
+              </div>
+            </div>
+
+            {deptMessage && (
+              <div
+                className={`p-3 rounded-xl text-xs ${
+                  deptMessage.startsWith('Error')
+                    ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+                    : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-200'
+                }`}
+              >
+                {deptMessage}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Form Col */}
+              <form onSubmit={handleCreateDepartment} className="lg:col-span-2 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Department Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Department of Physics"
+                      value={deptName}
+                      onChange={(e) => setDeptName(e.target.value)}
+                      className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Department Code * (2-digit unique code)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 03"
+                      value={deptCode}
+                      onChange={(e) => setDeptCode(e.target.value)}
+                      className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Abbreviation / Short Code
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. PHY"
+                      value={deptAbbr}
+                      onChange={(e) => setDeptAbbr(e.target.value)}
+                      className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400 uppercase font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Department Logo (Optional - defaults to University Logo)
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        setDeptLogoFile(file || null);
+                        if (file) {
+                          setDeptLogoPreview(URL.createObjectURL(file));
+                        } else {
+                          setDeptLogoPreview('/nstu-logo.png');
+                        }
+                      }}
+                      className="w-full p-2 text-xs rounded-xl glass-input text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:bg-cyan-500/20 file:text-cyan-300"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Department Description
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Short description for academic archive..."
+                    value={deptDesc}
+                    onChange={(e) => setDeptDesc(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={actionLoading}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-glass-glow disabled:opacity-50 transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Department & Generate Card</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Card Live Preview (Matching Image 2) */}
+              <div className="flex flex-col items-center">
+                <span className="text-[11px] font-bold text-cyan-300 mb-2 uppercase tracking-wider">
+                  Live Card Preview (Image 2 Style)
+                </span>
+                <div className="w-full max-w-[280px]">
+                  <DepartmentCard
+                    department={{
+                      department_code: deptCode || '00',
+                      name: deptName || 'Department Name',
+                      abbreviation: deptAbbr || 'DEPT',
+                      icon_url: deptLogoPreview,
+                      description: deptDesc || 'Department archive preview card.',
+                      total_courses: 0,
+                      total_questions: 0,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Existing Departments Grid */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-white">Current Departments ({departments.length})</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {departments.map((d) => (
+                <DepartmentCard key={d.id} department={d} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: SUPER ADMIN SET DEPT ADMIN (Requirement 12) */}
+      {activeTab === 'dept-admins' && isSuperAdmin && (
+        <div className="space-y-8">
+          <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-amber-500/40 bg-[#120d2b]/95 space-y-6">
+            <div className="border-b border-white/10 pb-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Shield className="w-5 h-5 text-amber-400" />
+                <span>Super Admin: Department Administrator Setup</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Configure department administrators with their EduMail and Roll. The Department Admin will verify their EduMail and can then log in using the password specified by Super Admin.
+              </p>
+            </div>
+
+            {deptAdminMessage && (
+              <div
+                className={`p-3 rounded-xl text-xs ${
+                  deptAdminMessage.startsWith('Error')
+                    ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+                    : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-200'
+                }`}
+              >
+                {deptAdminMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleSetDeptAdmin} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Target Department *
+                </label>
+                <select
+                  value={newAdminDeptId}
+                  onChange={(e) => setNewAdminDeptId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
+                >
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id} className="bg-slate-900 text-white">
+                      {d.name} ({d.department_code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Dept Admin EduMail * (must be @student.nstu.edu.bd)
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="roll@student.nstu.edu.bd"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Student Roll / ID *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. ABC0011222M"
+                  value={newAdminRoll}
+                  onChange={(e) => setNewAdminRoll(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Password Given by Super Admin *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. DeptAdmin@2026"
+                  value={newAdminPassword}
+                  onChange={(e) => setNewAdminPassword(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400 font-mono"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Admin Display Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ashraful Islam (IIT Admin)"
+                  value={newAdminName}
+                  onChange={(e) => setNewAdminName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                />
+              </div>
+
+              <div className="md:col-span-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow-md disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  Configure Department Admin
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* List of Configured Department Admins */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-white">Assigned Department Administrators</h3>
+            <div className="rounded-2xl glass-card overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-white/5 border-b border-white/10 text-slate-400 uppercase font-semibold">
+                  <tr>
+                    <th className="p-3.5">Department</th>
+                    <th className="p-3.5">EduMail</th>
+                    <th className="p-3.5">Roll</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Verification Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-slate-300">
+                  {deptAdmins.map((adm) => (
+                    <tr key={adm.id} className="hover:bg-white/5">
+                      <td className="p-3.5 font-bold text-white">
+                        {adm.department?.name} ({adm.department?.department_code})
+                      </td>
+                      <td className="p-3.5 font-mono text-cyan-300">{adm.email}</td>
+                      <td className="p-3.5 font-mono text-slate-300">{adm.roll || 'N/A'}</td>
+                      <td className="p-3.5">
+                        {adm.is_verified ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>Verified & Active</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Pending EduMail Verification</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3.5 text-right space-x-2">
+                        {!adm.is_verified && (
+                          <button
+                            onClick={() => handleQuickVerifyAdmin(adm.email, adm.roll)}
+                            disabled={actionLoading}
+                            className="px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold cursor-pointer text-[11px]"
+                          >
+                            Verify EduMail
+                          </button>
+                        )}
+                        <a
+                          href={`/verify-admin?email=${encodeURIComponent(adm.email)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-[11px]"
+                        >
+                          <span>Verification Link</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: AUDIT TRAIL */}
       {activeTab === 'audit' && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -406,17 +857,16 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* TAB 4: SUPER ADMIN ROLE ASSIGNMENT */}
+      {/* TAB 6: GLOBAL ROLE ASSIGNMENT (Super Admin) */}
       {activeTab === 'users' && isSuperAdmin && (
         <div className="space-y-6">
           <div className="rounded-3xl glass-panel p-6 border border-purple-500/40 bg-[#100d28]/90 space-y-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-purple-400" />
-              <span>Assign Administrator Roles</span>
+              <span>Assign Global Administrator Roles</span>
             </h2>
             <p className="text-xs text-slate-400">
-              Super Administrators can designate Department Administrators to scoped departments or elevate
-              accounts to global Super Admin status.
+              Super Administrators can elevate registered accounts to global Super Admin status or assign scoped roles.
             </p>
 
             {assignMessage && (

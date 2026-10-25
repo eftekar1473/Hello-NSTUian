@@ -89,6 +89,10 @@ export const api = {
   submitCorrection: (formData) => request('/correction-requests', { method: 'POST', body: formData }),
   getMyCorrections: () => request('/correction-requests/my'),
 
+  // Department Management (Admin)
+  createDepartment: (formData) => request('/departments', { method: 'POST', body: formData }),
+  updateDepartment: (id, formData) => request(`/departments/${id}`, { method: 'PATCH', body: formData }),
+
   // Admin
   getAdminDashboard: () => request('/admin/dashboard'),
   getReviewableUploads: () => request('/admin/uploads'),
@@ -99,4 +103,9 @@ export const api = {
   getAuditLogs: () => request('/admin/audit-logs'),
   getAdminUsers: () => request('/admin/users'),
   assignRole: (body) => request('/admin/assign-role', { method: 'POST', body: JSON.stringify(body) }),
+
+  // Department Admin Management (Super Admin)
+  createDeptAdmin: (body) => request('/admin/dept-admins', { method: 'POST', body: JSON.stringify(body) }),
+  getDeptAdmins: () => request('/admin/dept-admins'),
+  verifyDeptAdmin: (body) => request('/admin/verify-dept-admin', { method: 'POST', body: JSON.stringify(body) }),
 };

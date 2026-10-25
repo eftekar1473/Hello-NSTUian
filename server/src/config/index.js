@@ -13,7 +13,7 @@ export const config = {
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5173',
   jwtSecret: process.env.JWT_SECRET || 'dev_secret_hello_nstuian_key_32chars_long',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  allowedEduMailDomains: (process.env.ALLOWED_EDUMAIL_DOMAINS || 'nstu.edu.bd')
+  allowedEduMailDomains: (process.env.ALLOWED_EDUMAIL_DOMAINS || 'student.nstu.edu.bd,nstu.edu.bd')
     .split(',')
     .map((d) => d.trim().toLowerCase()),
   storage: {

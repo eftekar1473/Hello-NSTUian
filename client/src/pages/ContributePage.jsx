@@ -150,7 +150,7 @@ export default function ContributePage() {
 
       if (!user) {
         formData.append('contributorName', guestName.trim() || 'NSTU Student');
-        formData.append('contributorEmail', guestEmail.trim() || 'student@nstu.edu.bd');
+        formData.append('contributorEmail', guestEmail.trim() || 'student@student.nstu.edu.bd');
       }
 
       const res = await api.submitUpload(formData);
@@ -306,7 +306,7 @@ export default function ContributePage() {
                   <input
                     type="email"
                     required
-                    placeholder="e.g. student@nstu.edu.bd"
+                    placeholder="e.g. roll@student.nstu.edu.bd"
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
                     className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"

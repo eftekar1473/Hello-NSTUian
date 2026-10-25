@@ -17,7 +17,7 @@ export async function submitUpload(req, res) {
     // If unauthenticated guest/student, resolve or create user by contributorEmail.
     let contributorUser = req.user;
     if (!contributorUser) {
-      const email = (validated.contributorEmail || 'student.contributor@nstu.edu.bd').toLowerCase();
+      const email = (validated.contributorEmail || 'student.contributor@student.nstu.edu.bd').toLowerCase();
       const displayName = validated.contributorName || 'NSTU Student Contributor';
 
       contributorUser = await prisma.user.upsert({

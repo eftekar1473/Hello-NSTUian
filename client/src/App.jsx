@@ -11,6 +11,8 @@ import DepartmentDetailPage from './pages/DepartmentDetailPage';
 import CourseDetailPage from './pages/CourseDetailPage';
 import ContributePage from './pages/ContributePage';
 import LoginPage from './pages/LoginPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import VerifyAdminPage from './pages/VerifyAdminPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 
 export default function App() {
@@ -37,6 +39,8 @@ export default function App() {
               <Route path="/courses/:courseId" element={<CourseDetailPage />} />
               <Route path="/contribute" element={<ContributePage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/admin/login" element={<AdminLoginPage />} />
+              <Route path="/verify-admin" element={<VerifyAdminPage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
             </Routes>
           </main>

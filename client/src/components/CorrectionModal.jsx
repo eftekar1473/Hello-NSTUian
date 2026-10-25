@@ -33,7 +33,7 @@ export default function CorrectionModal({ question, onClose, onSuccess }) {
       }
       if (!user) {
         formData.append('contributorName', guestName.trim() || 'NSTU Student');
-        formData.append('contributorEmail', guestEmail.trim() || 'student@nstu.edu.bd');
+        formData.append('contributorEmail', guestEmail.trim() || 'student@student.nstu.edu.bd');
       }
 
       await api.submitCorrection(formData);
@@ -90,7 +90,7 @@ export default function CorrectionModal({ question, onClose, onSuccess }) {
                 <label className="block text-[11px] font-semibold text-slate-300 mb-1">Your Email</label>
                 <input
                   type="email"
-                  placeholder="student@nstu.edu.bd"
+                  placeholder="roll@student.nstu.edu.bd"
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   className="w-full p-2 rounded-lg glass-input text-white text-xs"

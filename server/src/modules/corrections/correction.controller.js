@@ -17,7 +17,7 @@ export async function submitCorrectionRequest(req, res) {
 
     let contributorUser = req.user;
     if (!contributorUser) {
-      const email = (validated.contributorEmail || 'student.contributor@nstu.edu.bd').toLowerCase();
+      const email = (validated.contributorEmail || 'student.contributor@student.nstu.edu.bd').toLowerCase();
       const displayName = validated.contributorName || 'NSTU Student';
 
       contributorUser = await prisma.user.upsert({

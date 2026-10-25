@@ -97,6 +97,14 @@ export async function login(req, res) {
       });
     }
 
+    const isDeptAdmin = user.admin_permissions?.some((p) => p.role === 'DEPARTMENT_ADMIN');
+    if (isDeptAdmin && !user.email_verified_at) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Your Department Admin account is pending EduMail verification. Please verify your EduMail before logging in.',
+      });
+    }
+
     const token = jwt.sign({ userId: user.id }, config.jwtSecret, {
       expiresIn: config.jwtExpiresIn,
     });
