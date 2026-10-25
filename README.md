@@ -133,7 +133,7 @@ Hello NSTUian/
 Department (A–Z) ──> Admission Session ──> Semester (1–8) ──> Course ──> Exam Session ──> Exam Paper
 ```
 
-**Student ID Segment Format (e.g., `ASH2325006M`):**
+**Student ID Segment Format (e.g., `ABC0011222M`):**
 - `ABC`: Hall identifier
 - `00`: University admission session (2022–2023)
 - `11`: Department ID (**25 = Institute of Information Technology**)

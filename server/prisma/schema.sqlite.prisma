@@ -1,0 +1,292 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Department {
+  id              String             @id @default(uuid())
+  department_code String             @unique // e.g. "25" for IIT
+  name            String             // e.g. "Institute of Information Technology"
+  abbreviation    String?            // e.g. "IIT"
+  description     String?
+  icon_url        String?
+  is_active       Boolean            @default(true)
+  created_at      DateTime           @default(now())
+  updated_at      DateTime           @updatedAt
+
+  programs        AcademicProgram[]
+  question_papers QuestionPaper[]
+  upload_requests UploadRequest[]
+  admin_permissions AdminPermission[]
+  audit_logs      AuditLog[]
+
+  @@map("departments")
+}
+
+model UniversitySession {
+  id            String          @id @default(uuid())
+  session_label String          @unique // e.g. "2022-2023"
+  start_year    Int
+  end_year      Int
+  is_active     Boolean         @default(true)
+  created_at    DateTime        @default(now())
+
+  question_papers QuestionPaper[]
+  upload_requests UploadRequest[]
+
+  @@map("university_sessions")
+}
+
+model AcademicProgram {
+  id            String       @id @default(uuid())
+  department_id String
+  program_name  String       // e.g. "Bachelor of Science in Information Technology"
+  program_code  String       // e.g. "BSIT"
+  is_active     Boolean      @default(true)
+  created_at    DateTime     @default(now())
+
+  department    Department   @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  semesters     Semester[]
+  courses       Course[]
+
+  @@map("academic_programs")
+}
+
+model Semester {
+  id              String          @id @default(uuid())
+  program_id      String
+  semester_number Int             // 1 through 8
+  semester_name   String          // e.g. "Semester 1", "Semester 3"
+  created_at      DateTime        @default(now())
+
+  program         AcademicProgram @relation(fields: [program_id], references: [id], onDelete: Cascade)
+  courses         Course[]
+
+  @@unique([program_id, semester_number])
+  @@map("semesters")
+}
+
+model Course {
+  id            String          @id @default(uuid())
+  program_id    String
+  semester_id   String
+  course_code   String          // e.g. "IIT 1101"
+  course_title  String          // e.g. "Structured Programming"
+  credit        Float?          @default(3.0)
+  description   String?
+  is_active     Boolean         @default(true)
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+
+  program       AcademicProgram @relation(fields: [program_id], references: [id], onDelete: Cascade)
+  semester      Semester        @relation(fields: [semester_id], references: [id], onDelete: Cascade)
+  question_papers QuestionPaper[]
+  upload_requests UploadRequest[]
+
+  @@unique([program_id, course_code])
+  @@map("courses")
+}
+
+model User {
+  id                    String            @id @default(uuid())
+  email                 String            @unique
+  email_verified_at     DateTime?
+  password_hash         String?
+  display_name          String
+  student_id            String?           // e.g. "ABC0011222M"
+  account_status        String            @default("ACTIVE") // ACTIVE, SUSPENDED, BLOCKED
+  auth_provider         String            @default("LOCAL")  // LOCAL, SUPABASE, etc.
+  auth_provider_user_id String?
+  created_at            DateTime          @default(now())
+  updated_at            DateTime          @updatedAt
+
+  admin_permissions     AdminPermission[]
+  upload_requests       UploadRequest[]   @relation("UserUploads")
+  reviewed_uploads      UploadRequest[]   @relation("AdminReviewedUploads")
+  correction_requests   CorrectionRequest[] @relation("UserCorrections")
+  reviewed_corrections  CorrectionRequest[] @relation("AdminReviewedCorrections")
+  question_papers_added QuestionPaper[]   @relation("UserCreatedPapers")
+  audit_logs            AuditLog[]
+
+  @@map("users")
+}
+
+model AdminPermission {
+  id            String      @id @default(uuid())
+  user_id       String
+  role          String      // "SUPER_ADMIN" or "DEPARTMENT_ADMIN"
+  department_id String?     // null for SUPER_ADMIN
+  assigned_by   String?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+
+  user          User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  department    Department? @relation(fields: [department_id], references: [id], onDelete: SetNull)
+
+  @@unique([user_id, role, department_id])
+  @@map("admin_permissions")
+}
+
+model ExamSession {
+  id            String          @id @default(uuid())
+  label         String          @unique // e.g. "2024", "2025"
+  academic_year String?
+  exam_date     DateTime?
+  created_at    DateTime        @default(now())
+
+  question_papers QuestionPaper[]
+  upload_requests UploadRequest[]
+
+  @@map("exam_sessions")
+}
+
+model ExamType {
+  id                 String          @id @default(uuid())
+  code               String          @unique // "CT", "SEMESTER_FINAL", "MIDTERM"
+  name               String          // "Continuous Assessment (CT)", "Semester Final Examination"
+  requires_ct_number Boolean         @default(false)
+  is_active          Boolean         @default(true)
+
+  question_papers    QuestionPaper[]
+  upload_requests    UploadRequest[]
+
+  @@map("exam_types")
+}
+
+model QuestionPaper {
+  id                    String            @id @default(uuid())
+  department_id         String
+  course_id             String
+  university_session_id String?
+  exam_session_id       String
+  exam_type_id          String
+  ct_number             Int?              // 1, 2, 3
+  set_name              String?           // "A", "B", "C", "Standard"
+  title                 String?
+  description           String?
+  publication_status    String            @default("published") // "published", "archived"
+  current_version_id    String?
+  created_by            String
+  created_at            DateTime          @default(now())
+  updated_at            DateTime          @updatedAt
+
+  department            Department        @relation(fields: [department_id], references: [id], onDelete: Restrict)
+  course                Course            @relation(fields: [course_id], references: [id], onDelete: Restrict)
+  university_session    UniversitySession? @relation(fields: [university_session_id], references: [id], onDelete: SetNull)
+  exam_session          ExamSession       @relation(fields: [exam_session_id], references: [id], onDelete: Restrict)
+  exam_type             ExamType          @relation(fields: [exam_type_id], references: [id], onDelete: Restrict)
+  creator               User              @relation("UserCreatedPapers", fields: [created_by], references: [id])
+  versions              QuestionPaperVersion[]
+  correction_requests   CorrectionRequest[]
+
+  @@index([department_id])
+  @@index([course_id])
+  @@index([publication_status])
+  @@map("question_papers")
+}
+
+model QuestionPaperVersion {
+  id                String        @id @default(uuid())
+  question_paper_id String
+  version_number    Int           @default(1)
+  storage_key       String
+  file_url          String?
+  original_filename String
+  mime_type         String
+  file_size         Int
+  sha256_hash       String
+  created_by        String
+  change_summary    String?
+  created_at        DateTime      @default(now())
+
+  question_paper    QuestionPaper @relation(fields: [question_paper_id], references: [id], onDelete: Cascade)
+
+  @@index([sha256_hash])
+  @@index([question_paper_id])
+  @@map("question_paper_versions")
+}
+
+model UploadRequest {
+  id                         String             @id @default(uuid())
+  submitted_by               String
+  department_id              String
+  course_id                  String
+  university_session_id      String?
+  exam_session_id            String
+  exam_type_id               String
+  ct_number                  Int?
+  set_name                   String?
+  temporary_storage_key      String
+  original_filename          String
+  mime_type                  String
+  file_size                  Int
+  sha256_hash                String
+  status                     String             @default("pending_review") // "pending_review", "published", "rejected", "duplicate_flagged"
+  published_question_paper_id String?
+  reviewed_by                String?
+  reviewed_at                DateTime?
+  rejection_reason           String?
+  created_at                 DateTime           @default(now())
+
+  submitter                  User               @relation("UserUploads", fields: [submitted_by], references: [id])
+  reviewer                   User?              @relation("AdminReviewedUploads", fields: [reviewed_by], references: [id])
+  department                 Department         @relation(fields: [department_id], references: [id])
+  course                     Course             @relation(fields: [course_id], references: [id])
+  university_session         UniversitySession? @relation(fields: [university_session_id], references: [id])
+  exam_session               ExamSession        @relation(fields: [exam_session_id], references: [id])
+  exam_type                  ExamType           @relation(fields: [exam_type_id], references: [id])
+
+  @@index([status])
+  @@index([sha256_hash])
+  @@map("upload_requests")
+}
+
+model CorrectionRequest {
+  id                    String        @id @default(uuid())
+  question_paper_id     String
+  requested_by          String
+  description           String
+  proposed_storage_key  String?
+  proposed_filename     String?
+  proposed_mime_type    String?
+  proposed_file_size    Int?
+  proposed_sha256_hash  String?
+  status                String        @default("pending_review") // "pending_review", "approved", "rejected", "needs_changes", "cancelled"
+  reviewed_by           String?
+  reviewed_at           DateTime?
+  review_notes          String?
+  resulting_version_id  String?
+  created_at            DateTime      @default(now())
+  updated_at            DateTime      @updatedAt
+
+  question_paper        QuestionPaper @relation(fields: [question_paper_id], references: [id], onDelete: Cascade)
+  requester             User          @relation("UserCorrections", fields: [requested_by], references: [id])
+  reviewer              User?         @relation("AdminReviewedCorrections", fields: [reviewed_by], references: [id])
+
+  @@index([question_paper_id])
+  @@index([status])
+  @@map("correction_requests")
+}
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  actor_user_id String?
+  action        String      // "UPLOAD_AUTO_PUBLISHED", "CORRECTION_SUBMITTED", "CORRECTION_APPROVED", "QUESTION_ARCHIVED", etc.
+  entity_type   String      // "QUESTION_PAPER", "CORRECTION_REQUEST", "ADMIN_PERMISSION", etc.
+  entity_id     String
+  department_id String?
+  details       String?     // Structured JSON payload
+  created_at    DateTime    @default(now())
+
+  actor         User?       @relation(fields: [actor_user_id], references: [id], onDelete: SetNull)
+  department    Department? @relation(fields: [department_id], references: [id], onDelete: SetNull)
+
+  @@index([actor_user_id])
+  @@index([department_id])
+  @@index([created_at])
+  @@map("audit_logs")
+}
