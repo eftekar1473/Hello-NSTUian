@@ -41,7 +41,11 @@ export async function getDepartments(req, res) {
     return res.json({ departments: formatted });
   } catch (err) {
     console.error('getDepartments error:', err);
-    return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch departments.' });
+    return res.status(500).json({
+      error: 'Server Error',
+      message: 'Failed to fetch departments.',
+      details: err.message,
+    });
   }
 }
 

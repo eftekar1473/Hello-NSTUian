@@ -13,6 +13,7 @@ import questionRouter from './modules/questions/question.router.js';
 import uploadRouter from './modules/uploads/upload.router.js';
 import correctionRouter from './modules/corrections/correction.router.js';
 import adminRouter from './modules/admin/admin.router.js';
+import { prisma } from './services/prisma.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,8 +65,27 @@ app.use('/storage', express.static(path.resolve(__dirname, '../storage/uploads')
 app.use(express.static(path.resolve(__dirname, '../../client/public')));
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Hello NSTUian API', timestamp: new Date() });
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'unknown';
+  let dbError = null;
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = 'connected';
+  } catch (err) {
+    dbStatus = 'disconnected';
+    dbError = err.message;
+  }
+  res.json({
+    status: 'ok',
+    service: 'Hello NSTUian API',
+    version: '1.0.1',
+    db: {
+      status: dbStatus,
+      error: dbError,
+      has_database_url: Boolean(process.env.DATABASE_URL),
+    },
+    timestamp: new Date(),
+  });
 });
 
 // Serve frontend static assets if client build exists
