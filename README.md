@@ -134,8 +134,8 @@ Department (A–Z) ──> Admission Session ──> Semester (1–8) ──> Co
 ```
 
 **Student ID Segment Format (e.g., `ASH2325006M`):**
-- `ASH`: Hall identifier
-- `23`: University admission session (2022–2023)
-- `25`: Department ID (**25 = Institute of Information Technology**)
-- `006`: Student roll number
+- `ABC`: Hall identifier
+- `00`: University admission session (2022–2023)
+- `11`: Department ID (**25 = Institute of Information Technology**)
+- `222`: Student roll number
 - `M`: Gender identifier
