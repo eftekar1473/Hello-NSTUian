@@ -15,6 +15,9 @@ if (rawUrl.includes('db.rhhlebvhiikrqfrzyexr.supabase.co')) {
   }
 }
 
+// Ensure process.env.DATABASE_URL is also updated globally
+process.env.DATABASE_URL = rawUrl;
+
 export const prisma = new PrismaClient({
   datasources: {
     db: {

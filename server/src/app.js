@@ -78,7 +78,7 @@ app.get('/api/health', async (req, res) => {
   res.json({
     status: 'ok',
     service: 'Hello NSTUian API',
-    version: '1.0.1',
+    version: '1.0.2',
     db: {
       status: dbStatus,
       error: dbError,
