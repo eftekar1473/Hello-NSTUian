@@ -39,16 +39,16 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.status).toBe('ok');
     });
 
-    it('GET /api/v1/departments returns A-Z list of active departments', async () => {
+    it('GET /api/v1/departments returns serial list of active departments', async () => {
       const res = await request(app).get('/api/v1/departments');
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.departments)).toBe(true);
-      expect(res.body.departments.length).toBeGreaterThan(0);
+      expect(res.body.departments.length).toBe(33);
 
-      // Verify A-Z ordering
-      const names = res.body.departments.map((d) => d.name);
-      const sortedNames = [...names].sort((a, b) => a.localeCompare(b));
-      expect(names).toEqual(sortedNames);
+      // Verify serial code ordering (01 to 33)
+      const codes = res.body.departments.map((d) => d.department_code);
+      const sortedCodes = [...codes].sort((a, b) => a.localeCompare(b));
+      expect(codes).toEqual(sortedCodes);
 
       // Check IIT existence
       const iit = res.body.departments.find((d) => d.department_code === '25');
@@ -59,7 +59,7 @@ describe('Hello NSTUian API Test Suite', () => {
     it('GET /api/v1/departments/:id returns department details with semesters & courses', async () => {
       const res = await request(app).get('/api/v1/departments/25');
       expect(res.status).toBe(200);
-      expect(res.body.department.name).toBe('Institute of Information Technology');
+      expect(res.body.department.name).toBe('Software Engineering, IIT');
       expect(res.body.department.programs.length).toBeGreaterThan(0);
       expect(res.body.department.programs[0].semesters.length).toBe(8);
     });

@@ -23,27 +23,27 @@ export default function DepartmentsPage() {
     loadDepts();
   }, []);
 
-  const letters = ['ALL', ...new Set(departments.map((d) => d.name[0].toUpperCase()))].sort();
+  const letters = ['ALL', ...new Set(departments.map((d) => d.name[0]?.toUpperCase()).filter(Boolean))].sort();
 
   const filtered = departments.filter((d) => {
-    const matchesQuery = `${d.name} ${d.abbreviation} ${d.department_code}`
+    const matchesQuery = `${d.name} ${d.abbreviation || ''} ${d.department_code}`
       .toLowerCase()
       .includes(search.toLowerCase());
-    const matchesLetter = activeLetter === 'ALL' || d.name[0].toUpperCase() === activeLetter;
+    const matchesLetter = activeLetter === 'ALL' || d.name[0]?.toUpperCase() === activeLetter;
     return matchesQuery && matchesLetter;
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
         <div>
           <div className="inline-flex items-center gap-1.5 text-xs text-cyan-400 font-semibold uppercase tracking-wider mb-2">
             <Layers className="w-4 h-4" />
-            <span>Academic Directory</span>
+            <span>Academic Directory ({departments.length} Departments)</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-white">NSTU Departments (A–Z)</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">NSTU Departments</h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">
             Browse question banks across all faculties and institutes of Noakhali Science & Technology University.
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function DepartmentsPage() {
             placeholder="Search by name, code or acronym..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl glass-input text-white text-sm placeholder-slate-400"
+            className="w-full pl-10 pr-4 py-2 rounded-xl glass-input text-white text-xs sm:text-sm placeholder-slate-400"
           />
         </div>
       </div>
@@ -78,11 +78,11 @@ export default function DepartmentsPage() {
         ))}
       </div>
 
-      {/* Grid of Department Cards */}
+      {/* Grid of Department Cards - 4 in 1 screen on mobile (2 cols x 2 rows) */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-64 rounded-3xl glass-card animate-pulse bg-white/5" />
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="h-44 sm:h-64 rounded-2xl sm:rounded-3xl glass-card animate-pulse bg-white/5" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -99,7 +99,7 @@ export default function DepartmentsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
           {filtered.map((dept) => (
             <DepartmentCard key={dept.id} department={dept} />
           ))}

@@ -4,7 +4,7 @@ export async function getDepartments(req, res) {
   try {
     const departments = await prisma.department.findMany({
       where: { is_active: true },
-      orderBy: { name: 'asc' },
+      orderBy: { department_code: 'asc' },
       include: {
         _count: {
           select: {
@@ -177,8 +177,18 @@ export async function createDepartment(req, res) {
 export async function updateDepartment(req, res) {
   try {
     const { id } = req.params;
-    const { name, abbreviation, description } = req.body;
+    const { name, department_code, abbreviation, description } = req.body;
     let icon_url = req.body.icon_url;
+
+    const existingDept = await prisma.department.findFirst({
+      where: {
+        OR: [{ id }, { department_code: id }],
+      },
+    });
+
+    if (!existingDept) {
+      return res.status(404).json({ error: 'Not Found', message: 'Department not found.' });
+    }
 
     if (req.file) {
       icon_url = `/storage/${req.file.filename}`;
@@ -186,14 +196,33 @@ export async function updateDepartment(req, res) {
 
     const data = {};
     if (name) data.name = name.trim();
-    if (abbreviation) data.abbreviation = abbreviation.trim().toUpperCase();
-    if (description !== undefined) data.description = description ? description.trim() : null;
-    if (icon_url !== undefined) {
-      data.icon_url = icon_url ? icon_url.trim() : '/nstu-logo.png';
+
+    if (department_code && department_code.trim() !== existingDept.department_code) {
+      const codeTrimmed = department_code.trim();
+      const codeCheck = await prisma.department.findUnique({
+        where: { department_code: codeTrimmed },
+      });
+      if (codeCheck && codeCheck.id !== existingDept.id) {
+        return res.status(409).json({
+          error: 'Conflict',
+          message: `Department code ${codeTrimmed} is already used by ${codeCheck.name}.`,
+        });
+      }
+      data.department_code = codeTrimmed;
+    }
+
+    if (abbreviation !== undefined) {
+      data.abbreviation = abbreviation ? abbreviation.trim().toUpperCase() : null;
+    }
+    if (description !== undefined) {
+      data.description = description ? description.trim() : null;
+    }
+    if (icon_url !== undefined && icon_url !== null) {
+      data.icon_url = icon_url.trim() || '/nstu-logo.png';
     }
 
     const updated = await prisma.department.update({
-      where: { id },
+      where: { id: existingDept.id },
       data,
     });
 
@@ -201,5 +230,50 @@ export async function updateDepartment(req, res) {
   } catch (err) {
     console.error('updateDepartment error:', err);
     return res.status(500).json({ error: 'Server Error', message: 'Failed to update department.' });
+  }
+}
+
+export async function deleteDepartment(req, res) {
+  try {
+    const { id } = req.params;
+
+    const existingDept = await prisma.department.findFirst({
+      where: {
+        OR: [{ id }, { department_code: id }],
+      },
+      include: {
+        _count: {
+          select: {
+            question_papers: true,
+            upload_requests: true,
+          },
+        },
+      },
+    });
+
+    if (!existingDept) {
+      return res.status(404).json({ error: 'Not Found', message: 'Department not found.' });
+    }
+
+    // If there are uploaded questions, soft delete or warn
+    if (existingDept._count.question_papers > 0 || existingDept._count.upload_requests > 0) {
+      const deactivated = await prisma.department.update({
+        where: { id: existingDept.id },
+        data: { is_active: false },
+      });
+      return res.json({
+        message: 'Department deactivated successfully as it contains question archives.',
+        department: deactivated,
+      });
+    }
+
+    await prisma.department.delete({
+      where: { id: existingDept.id },
+    });
+
+    return res.json({ message: 'Department deleted successfully.' });
+  } catch (err) {
+    console.error('deleteDepartment error:', err);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to delete department.' });
   }
 }

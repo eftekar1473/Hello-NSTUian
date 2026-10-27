@@ -71,104 +71,237 @@ async function main() {
     examSessions[year] = record;
   }
 
-  // 4. Departments (Explicitly ensuring Bangla, Math, English, Physics, Chemistry, and IIT)
+  // 4. Departments (Full 33 NSTU Departments serially 01 to 33)
   const departmentsData = [
     {
-      department_code: '04',
-      name: 'Bangla',
-      abbreviation: 'BAN',
-      description: 'Department of Bangla Language and Literature at NSTU.',
+      department_code: '01',
+      name: 'Computer Science and Telecommunication Engineering',
+      abbreviation: 'CSTE',
+      description: 'Department of Computer Science and Telecommunication Engineering at NSTU.',
       icon_url: '/nstu-logo.png',
     },
     {
       department_code: '02',
-      name: 'Mathematics',
-      abbreviation: 'MATH',
-      description: 'Department of Mathematics at NSTU.',
+      name: 'Fisheries and Marine Science',
+      abbreviation: 'FIMS',
+      description: 'Department of Fisheries and Marine Science at NSTU.',
       icon_url: '/nstu-logo.png',
     },
     {
-      department_code: '14',
+      department_code: '03',
+      name: 'Pharmacy',
+      abbreviation: 'PHARM',
+      description: 'Department of Pharmacy at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '04',
+      name: 'Applied Chemistry and Chemical Engineering',
+      abbreviation: 'ACCE',
+      description: 'Department of Applied Chemistry and Chemical Engineering at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '05',
+      name: 'Microbiology',
+      abbreviation: 'MBG',
+      description: 'Department of Microbiology at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '06',
+      name: 'Applied Mathematics',
+      abbreviation: 'A. MATH',
+      description: 'Department of Applied Mathematics at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '07',
       name: 'English',
       abbreviation: 'ENG',
       description: 'Department of English Language & Literature at NSTU.',
       icon_url: '/nstu-logo.png',
     },
     {
-      department_code: '03',
+      department_code: '08',
+      name: 'Food Technology and Nutrition Science',
+      abbreviation: 'FTNS',
+      description: 'Department of Food Technology and Nutrition Science at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '09',
+      name: 'Environmental Science and Disaster Management',
+      abbreviation: 'ESDM',
+      description: 'Department of Environmental Science and Disaster Management at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '10',
+      name: 'Dept. of Business Administration',
+      abbreviation: 'DBA',
+      description: 'Department of Business Administration at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '11',
+      name: 'Information and Communication Engineering',
+      abbreviation: 'ICE',
+      description: 'Department of Information and Communication Engineering at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '12',
+      name: 'Economics',
+      abbreviation: 'ECO',
+      description: 'Department of Economics at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '13',
+      name: 'Biotechnology and Genetic Engineering',
+      abbreviation: 'BGE',
+      description: 'Department of Biotechnology and Genetic Engineering at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '14',
+      name: 'Agriculture',
+      abbreviation: 'AG',
+      description: 'Department of Agriculture at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '15',
+      name: 'Statistics',
+      abbreviation: 'STAT',
+      description: 'Department of Statistics at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '16',
+      name: 'Political Science',
+      abbreviation: 'POS',
+      description: 'Department of Political Science at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '17',
+      name: 'Electrical and Electronic Engineering',
+      abbreviation: 'EEE',
+      description: 'Department of Electrical and Electronic Engineering at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '18',
+      name: 'Oceanography',
+      abbreviation: 'OCN',
+      description: 'Department of Oceanography at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '19',
+      name: 'Education',
+      abbreviation: 'EDU',
+      description: 'Department of Education at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '20',
+      name: 'Sociology',
+      abbreviation: 'SOC',
+      description: 'Department of Sociology at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '21',
+      name: 'Tourism and Hospitality Management',
+      abbreviation: 'THM',
+      description: 'Department of Tourism and Hospitality Management at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '22',
+      name: 'Management Information Systems',
+      abbreviation: 'MIS',
+      description: 'Department of Management Information Systems at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '23',
+      name: 'Biochemistry and Molecular Biology',
+      abbreviation: 'BMB',
+      description: 'Department of Biochemistry and Molecular Biology at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '24',
+      name: 'ISLM, IIS',
+      abbreviation: 'IIS',
+      description: 'Information Science and Library Management, Institute of Information Sciences at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '25',
+      name: 'Software Engineering, IIT',
+      abbreviation: 'IIT',
+      description: 'Institute of Information Technology (IIT) at NSTU.',
+      icon_url: '/iit-card.jpg',
+    },
+    {
+      department_code: '26',
+      name: 'Bangla',
+      abbreviation: 'BANG',
+      description: 'Department of Bangla Language and Literature at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '27',
+      name: 'Law',
+      abbreviation: 'LAW',
+      description: 'Department of Law at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '28',
+      name: 'Zoology',
+      abbreviation: 'ZOO',
+      description: 'Department of Zoology at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '29',
+      name: 'Educational Administration',
+      abbreviation: 'EA',
+      description: 'Department of Educational Administration at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '30',
+      name: 'Social Work',
+      abbreviation: 'SW',
+      description: 'Department of Social Work at NSTU.',
+      icon_url: '/nstu-logo.png',
+    },
+    {
+      department_code: '31',
       name: 'Physics',
       abbreviation: 'PHY',
       description: 'Department of Physics at NSTU.',
       icon_url: '/nstu-logo.png',
     },
     {
-      department_code: '06',
+      department_code: '32',
       name: 'Chemistry',
       abbreviation: 'CHEM',
       description: 'Department of Chemistry at NSTU.',
       icon_url: '/nstu-logo.png',
     },
     {
-      department_code: '25',
-      name: 'Institute of Information Technology',
-      abbreviation: 'IIT',
-      description: 'Premier institute providing high-standard education in Information Technology and Software Engineering at NSTU.',
-      icon_url: '/iit-card.jpg',
-    },
-    {
-      department_code: '01',
-      name: 'Applied Chemistry & Chemical Engineering',
-      abbreviation: 'ACCE',
-      description: 'Department of Applied Chemistry & Chemical Engineering',
-      icon_url: '/nstu-logo.png',
-    },
-    {
-      department_code: '05',
-      name: 'Biotechnology and Genetic Engineering',
-      abbreviation: 'BGE',
-      description: 'Department of Biotechnology and Genetic Engineering',
-      icon_url: '/nstu-logo.png',
-    },
-    {
-      department_code: '11',
-      name: 'Computer Science & Telecommunication Engineering',
-      abbreviation: 'CSTE',
-      description: 'Department of Computer Science & Telecommunication Engineering',
-      icon_url: '/nstu-logo.png',
-    },
-    {
-      department_code: '12',
-      name: 'Electrical & Electronic Engineering',
-      abbreviation: 'EEE',
-      description: 'Department of Electrical & Electronic Engineering',
-      icon_url: '/nstu-logo.png',
-    },
-    {
-      department_code: '15',
-      name: 'Fisheries & Marine Science',
-      abbreviation: 'FIMS',
-      description: 'Department of Fisheries & Marine Science',
-      icon_url: '/nstu-logo.png',
-    },
-    {
-      department_code: '26',
-      name: 'Microbiology',
-      abbreviation: 'MICRO',
-      description: 'Department of Microbiology',
-      icon_url: '/nstu-logo.png',
-    },
-    {
-      department_code: '28',
-      name: 'Pharmacy',
-      abbreviation: 'PHARM',
-      description: 'Department of Pharmacy',
-      icon_url: '/nstu-logo.png',
-    },
-    {
-      department_code: '30',
-      name: 'Software Engineering',
-      abbreviation: 'SE',
-      description: 'Department of Software Engineering',
+      department_code: '33',
+      name: 'Soil, Water, and Environmental Sciences',
+      abbreviation: 'SWES',
+      description: 'Department of Soil, Water, and Environmental Sciences at NSTU.',
       icon_url: '/nstu-logo.png',
     },
   ];
@@ -242,7 +375,7 @@ async function main() {
 
   // Setup curriculum for Bangla, Math, English, Physics, Chemistry
   await setupDepartmentCurriculum(
-    departments['04'],
+    departments['26'],
     'BA-BAN',
     'Bachelor of Arts in Bangla',
     [
@@ -255,7 +388,7 @@ async function main() {
   );
 
   await setupDepartmentCurriculum(
-    departments['02'],
+    departments['06'],
     'BS-MATH',
     'Bachelor of Science in Mathematics',
     [
@@ -268,7 +401,7 @@ async function main() {
   );
 
   await setupDepartmentCurriculum(
-    departments['14'],
+    departments['07'],
     'BA-ENG',
     'Bachelor of Arts in English',
     [
@@ -281,7 +414,7 @@ async function main() {
   );
 
   await setupDepartmentCurriculum(
-    departments['03'],
+    departments['31'],
     'BS-PHY',
     'Bachelor of Science in Physics',
     [
@@ -294,7 +427,7 @@ async function main() {
   );
 
   await setupDepartmentCurriculum(
-    departments['06'],
+    departments['32'],
     'BS-CHEM',
     'Bachelor of Science in Chemistry',
     [

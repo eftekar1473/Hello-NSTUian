@@ -93,6 +93,7 @@ export const api = {
   // Department Management (Admin)
   createDepartment: (formData) => request('/departments', { method: 'POST', body: formData }),
   updateDepartment: (id, formData) => request(`/departments/${id}`, { method: 'PATCH', body: formData }),
+  deleteDepartment: (id) => request(`/departments/${id}`, { method: 'DELETE' }),
 
   // Admin
   getAdminDashboard: () => request('/admin/dashboard'),

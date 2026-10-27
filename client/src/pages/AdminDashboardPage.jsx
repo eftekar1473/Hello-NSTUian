@@ -18,6 +18,10 @@ import {
   Sparkles,
   ExternalLink,
   Building,
+  Edit3,
+  Trash2,
+  X,
+  Search,
 } from 'lucide-react';
 import DepartmentCard from '../components/DepartmentCard';
 
@@ -47,6 +51,17 @@ export default function AdminDashboardPage() {
   const [deptLogoFile, setDeptLogoFile] = useState(null);
   const [deptLogoPreview, setDeptLogoPreview] = useState('/nstu-logo.png');
   const [deptMessage, setDeptMessage] = useState('');
+
+  // Department Edit State
+  const [editingDept, setEditingDept] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editCode, setEditCode] = useState('');
+  const [editAbbr, setEditAbbr] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editLogoFile, setEditLogoFile] = useState(null);
+  const [editLogoPreview, setEditLogoPreview] = useState('/nstu-logo.png');
+  const [editMessage, setEditMessage] = useState('');
+  const [adminDeptSearch, setAdminDeptSearch] = useState('');
 
   // Super Admin: Set Dept Admin State
   const [newAdminDeptId, setNewAdminDeptId] = useState('');
@@ -214,6 +229,66 @@ export default function AdminDashboardPage() {
       await loadData();
     } catch (err) {
       setDeptMessage(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Start Edit Department
+  const startEditDepartment = (dept) => {
+    setEditingDept(dept);
+    setEditName(dept.name || '');
+    setEditCode(dept.department_code || '');
+    setEditAbbr(dept.abbreviation || '');
+    setEditDesc(dept.description || '');
+    setEditLogoFile(null);
+    setEditLogoPreview(dept.icon_url || '/nstu-logo.png');
+    setEditMessage('');
+  };
+
+  // Update Department Handler
+  const handleUpdateDepartment = async (e) => {
+    e.preventDefault();
+    if (!editingDept) return;
+    setActionLoading(true);
+    setEditMessage('');
+    try {
+      const formData = new FormData();
+      formData.append('name', editName.trim());
+      formData.append('department_code', editCode.trim());
+      if (editAbbr) formData.append('abbreviation', editAbbr.trim());
+      if (editDesc) formData.append('description', editDesc.trim());
+      if (editLogoFile) {
+        formData.append('logo', editLogoFile);
+      } else if (editLogoPreview) {
+        formData.append('icon_url', editLogoPreview);
+      }
+
+      await api.updateDepartment(editingDept.id, formData);
+      setEditMessage('Department updated successfully!');
+      setTimeout(() => {
+        setEditingDept(null);
+      }, 1000);
+      await loadData();
+    } catch (err) {
+      setEditMessage(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Delete Department Handler
+  const handleDeleteDepartment = async (dept) => {
+    if (!window.confirm(`Are you sure you want to delete or deactivate department: "${dept.name}" (${dept.department_code})?`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await api.deleteDepartment(dept.id);
+      alert(res.message || 'Department removed successfully.');
+      await loadData();
+    } catch (err) {
+      alert(`Failed to delete department: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -672,15 +747,210 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Existing Departments Grid */}
+          {/* Existing Departments Grid with Edit / Delete / Search */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-white">Current Departments ({departments.length})</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {departments.map((d) => (
-                <DepartmentCard key={d.id} department={d} />
-              ))}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>Current Departments ({departments.length})</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Click the edit or delete icon on any card to update its name, code, or logo.
+                </p>
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-cyan-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter by name, code, or abbr..."
+                  value={adminDeptSearch}
+                  onChange={(e) => setAdminDeptSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                />
+              </div>
+            </div>
+
+            {/* Grid matching mobile responsive (2 cols x 2 rows = 4 in 1 screen) */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
+              {departments
+                .filter((d) =>
+                  `${d.name} ${d.abbreviation || ''} ${d.department_code}`
+                    .toLowerCase()
+                    .includes(adminDeptSearch.toLowerCase())
+                )
+                .map((d) => (
+                  <DepartmentCard
+                    key={d.id}
+                    department={d}
+                    onEdit={startEditDepartment}
+                    onDelete={handleDeleteDepartment}
+                  />
+                ))}
             </div>
           </div>
+
+          {/* Edit Department Modal */}
+          {editingDept && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+              <div className="relative w-full max-w-2xl rounded-3xl glass-panel p-6 sm:p-8 border border-cyan-400/40 bg-[#0a142e]/95 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Edit3 className="w-5 h-5 text-cyan-400" />
+                    <h3 className="text-lg font-bold text-white">
+                      Edit Department: {editingDept.name} (Code: {editingDept.department_code})
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setEditingDept(null)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {editMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs ${
+                      editMessage.startsWith('Error')
+                        ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+                        : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-200'
+                    }`}
+                  >
+                    {editMessage}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Edit Form */}
+                  <form onSubmit={handleUpdateDepartment} className="md:col-span-2 space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Department Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Department Code * (2-digit unique code)
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editCode}
+                          onChange={(e) => setEditCode(e.target.value)}
+                          className="w-full p-2.5 rounded-xl glass-input text-white text-xs font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Abbreviation / Acronym
+                        </label>
+                        <input
+                          type="text"
+                          value={editAbbr}
+                          onChange={(e) => setEditAbbr(e.target.value)}
+                          className="w-full p-2.5 rounded-xl glass-input text-white text-xs uppercase font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Replace Logo (Image File)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          setEditLogoFile(file || null);
+                          if (file) {
+                            setEditLogoPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        className="w-full p-2 text-xs rounded-xl glass-input text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:bg-cyan-500/20 file:text-cyan-300"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Logo URL (Alternative to file upload)
+                      </label>
+                      <input
+                        type="text"
+                        value={editLogoPreview}
+                        onChange={(e) => {
+                          setEditLogoPreview(e.target.value);
+                          setEditLogoFile(null);
+                        }}
+                        className="w-full p-2 text-xs rounded-xl glass-input text-slate-300 font-mono"
+                        placeholder="/nstu-logo.png or https://..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Department Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={editDesc}
+                        onChange={(e) => setEditDesc(e.target.value)}
+                        className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <button
+                        type="submit"
+                        disabled={actionLoading}
+                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-glass-glow disabled:opacity-50 transition-all cursor-pointer"
+                      >
+                        {actionLoading ? 'Saving...' : 'Save Department Changes'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingDept(null)}
+                        className="px-4 py-2.5 rounded-xl glass-pill text-slate-300 hover:text-white text-xs font-medium cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Live Preview */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[11px] font-bold text-cyan-300 mb-2 uppercase tracking-wider">
+                      Live Preview
+                    </span>
+                    <div className="w-full max-w-[240px]">
+                      <DepartmentCard
+                        department={{
+                          department_code: editCode || '00',
+                          name: editName || 'Department Name',
+                          abbreviation: editAbbr || 'DEPT',
+                          icon_url: editLogoPreview,
+                          description: editDesc || 'Department archive preview card.',
+                          total_courses: editingDept.total_courses || 0,
+                          total_questions: editingDept.total_questions || 0,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

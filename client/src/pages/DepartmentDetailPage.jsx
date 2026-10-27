@@ -83,7 +83,7 @@ export default function DepartmentDetailPage() {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl p-2 glass-card border border-cyan-400/40 shadow-glass-glow flex-shrink-0 bg-blue-950/80 flex items-center justify-center">
             <img
-              src={department.icon_url || '/iit-crest.jpeg'}
+              src={department.icon_url || (department.department_code === '25' ? '/iit-card.jpg' : '/nstu-logo.png')}
               alt={department.name}
               className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]"
             />
