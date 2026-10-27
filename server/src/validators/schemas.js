@@ -22,6 +22,11 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+});
+
 export const uploadQuestionSchema = z.object({
   departmentId: z.string().min(1, 'Department is required'),
   courseId: z.string().min(1, 'Course is required'),

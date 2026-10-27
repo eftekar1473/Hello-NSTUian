@@ -56,6 +56,43 @@ export default function AdminDashboardPage() {
   const [newAdminName, setNewAdminName] = useState('');
   const [deptAdminMessage, setDeptAdminMessage] = useState('');
 
+  // Change Password State
+  const [currPassword, setCurrPassword] = useState('');
+  const [newPasswordVal, setNewPasswordVal] = useState('');
+  const [confirmPasswordVal, setConfirmPasswordVal] = useState('');
+  const [pwdMsg, setPwdMsg] = useState({ type: '', text: '' });
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwdMsg({ type: '', text: '' });
+
+    if (newPasswordVal.length < 6) {
+      setPwdMsg({ type: 'error', text: 'New password must be at least 6 characters.' });
+      return;
+    }
+    if (newPasswordVal !== confirmPasswordVal) {
+      setPwdMsg({ type: 'error', text: 'New password and confirmation do not match.' });
+      return;
+    }
+
+    setPwdLoading(true);
+    try {
+      await api.changePassword({
+        currentPassword: currPassword,
+        newPassword: newPasswordVal,
+      });
+      setPwdMsg({ type: 'success', text: 'Password successfully updated!' });
+      setCurrPassword('');
+      setNewPasswordVal('');
+      setConfirmPasswordVal('');
+    } catch (err) {
+      setPwdMsg({ type: 'error', text: err.message || 'Failed to update password.' });
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -312,6 +349,14 @@ export default function AdminDashboardPage() {
               Global Roles
             </button>
           )}
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer ${
+              activeTab === 'security' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Security & Password
+          </button>
         </div>
       </div>
 
@@ -935,6 +980,93 @@ export default function AdminDashboardPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* TAB 7: SECURITY & CHANGE PASSWORD */}
+      {activeTab === 'security' && (
+        <div className="max-w-xl mx-auto rounded-3xl glass-panel p-6 sm:p-8 border border-emerald-500/30 bg-[#0a1824]/90 space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Lock className="w-5 h-5 text-emerald-400" />
+              Change Administrator Password
+            </h2>
+            <p className="text-xs text-slate-400">
+              Update your account password. Changes take effect immediately.
+            </p>
+          </div>
+
+          {pwdMsg.text && (
+            <div
+              className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+                pwdMsg.type === 'success'
+                  ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-200'
+                  : 'bg-red-500/20 border-red-500/30 text-red-200'
+              }`}
+            >
+              {pwdMsg.type === 'success' ? (
+                <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              ) : (
+                <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              )}
+              <span>{pwdMsg.text}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Current Password *
+              </label>
+              <input
+                type="password"
+                required
+                value={currPassword}
+                onChange={(e) => setCurrPassword(e.target.value)}
+                placeholder="Enter current password"
+                className="w-full p-2.5 rounded-xl glass-input text-white text-xs border-white/10 focus:border-emerald-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                New Password *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={newPasswordVal}
+                onChange={(e) => setNewPasswordVal(e.target.value)}
+                placeholder="At least 6 characters"
+                className="w-full p-2.5 rounded-xl glass-input text-white text-xs border-white/10 focus:border-emerald-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Confirm New Password *
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={confirmPasswordVal}
+                onChange={(e) => setConfirmPasswordVal(e.target.value)}
+                placeholder="Re-enter new password"
+                className="w-full p-2.5 rounded-xl glass-input text-white text-xs border-white/10 focus:border-emerald-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={pwdLoading}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              {pwdLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {pwdLoading ? 'Updating Password...' : 'Save New Password'}
+            </button>
+          </form>
         </div>
       )}
     </div>

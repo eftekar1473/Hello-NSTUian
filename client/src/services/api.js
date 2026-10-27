@@ -82,6 +82,7 @@ export const api = {
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   getMe: () => request('/auth/me'),
+  changePassword: (body) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
 
   // Contributions
   submitUpload: (formData) => request('/uploads', { method: 'POST', body: formData }),

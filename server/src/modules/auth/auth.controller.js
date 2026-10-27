@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../../services/prisma.js';
 import { config } from '../../config/index.js';
-import { registerSchema, loginSchema } from '../../validators/schemas.js';
+import { registerSchema, loginSchema, changePasswordSchema } from '../../validators/schemas.js';
 
 export async function register(req, res) {
   try {
@@ -131,5 +131,47 @@ export async function getMe(req, res) {
     return res.json({ user: userProfile });
   } catch (err) {
     return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch user profile.' });
+  }
+}
+
+export async function changePassword(req, res) {
+  try {
+    const validatedData = changePasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+    });
+
+    if (!user || !user.password_hash) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'User account not found.',
+      });
+    }
+
+    const isMatch = await bcrypt.compare(validatedData.currentPassword, user.password_hash);
+    if (!isMatch) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'The current password you provided is incorrect.',
+      });
+    }
+
+    const newHash = await bcrypt.hash(validatedData.newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password_hash: newHash },
+    });
+
+    return res.json({
+      message: 'Password successfully changed.',
+    });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ error: 'Validation Error', issues: err.issues });
+    }
+    console.error('Change password error:', err);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to change password.' });
   }
 }
