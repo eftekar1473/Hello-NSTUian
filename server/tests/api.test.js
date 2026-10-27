@@ -28,6 +28,11 @@ describe('Hello NSTUian API Test Suite', () => {
   });
 
   describe('Public Browsing & Discovery', () => {
+    it('GET / returns 200 OK or index', async () => {
+      const res = await request(app).get('/');
+      expect([200, 304]).toContain(res.status);
+    });
+
     it('GET /api/health returns 200 OK', async () => {
       const res = await request(app).get('/api/health');
       expect(res.status).toBe(200);

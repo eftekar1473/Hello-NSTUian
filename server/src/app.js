@@ -99,6 +99,23 @@ if (fs.existsSync(clientDistPath)) {
     }
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
+} else {
+  // Friendly root route when backend is visited directly without client build
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'ok',
+      service: 'Hello NSTUian API',
+      message: 'Hello NSTUian Academic Question Bank API is live and operational.',
+      version: '1.0.2',
+      endpoints: {
+        health: '/api/health',
+        departments: '/api/v1/departments',
+        auth: '/api/v1/auth',
+        uploads: '/api/v1/uploads',
+        admin: '/api/v1/admin',
+      },
+    });
+  });
 }
 
 // 404 Handler for unmatched API routes
