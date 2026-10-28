@@ -538,7 +538,7 @@ export async function createDeptAdmin(req, res) {
         entity_type: 'ADMIN_PERMISSION',
         entity_id: user.id,
         department_id: departmentId,
-        details: JSON.stringify({ email: cleanEmail, roll, department: department.name }),
+        details: JSON.stringify({ email: cleanEmail, roll, department: department.name, password }),
       },
     });
 
@@ -549,6 +549,7 @@ export async function createDeptAdmin(req, res) {
         email: user.email,
         student_id: user.student_id,
         display_name: user.display_name,
+        password: password,
         is_verified: false,
       },
     });
@@ -579,17 +580,40 @@ export async function getDeptAdminsList(req, res) {
       orderBy: { created_at: 'desc' },
     });
 
-    const admins = permissions.map((p) => ({
-      id: p.id,
-      user_id: p.user?.id,
-      email: p.user?.email,
-      display_name: p.user?.display_name,
-      roll: p.user?.student_id,
-      is_verified: !!p.user?.email_verified_at,
-      email_verified_at: p.user?.email_verified_at,
-      department: p.department,
-      created_at: p.created_at,
-    }));
+    // Retrieve audit logs for DEPT_ADMIN_ASSIGNED to recover passwords configured by Super Admin
+    const auditLogs = await prisma.auditLog.findMany({
+      where: { action: 'DEPT_ADMIN_ASSIGNED' },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const admins = permissions.map((p) => {
+      let assignedPassword = null;
+      const log = auditLogs.find(
+        (l) => l.entity_id === p.user?.id || (l.details && l.details.includes(p.user?.email))
+      );
+      if (log && log.details) {
+        try {
+          const parsed = JSON.parse(log.details);
+          assignedPassword = parsed.password || null;
+        } catch {}
+      }
+      if (!assignedPassword && p.user?.email === 'iitadmin@nstu.edu.bd') {
+        assignedPassword = 'NstuAdmin@2026';
+      }
+
+      return {
+        id: p.id,
+        user_id: p.user?.id,
+        email: p.user?.email,
+        display_name: p.user?.display_name,
+        roll: p.user?.student_id,
+        password: assignedPassword || 'NstuAdmin@2026',
+        is_verified: !!p.user?.email_verified_at,
+        email_verified_at: p.user?.email_verified_at,
+        department: p.department,
+        created_at: p.created_at,
+      };
+    });
 
     return res.json({ admins });
   } catch (err) {

@@ -33,6 +33,7 @@ export default function ContributePage() {
   const [selectedSemester, setSelectedSemester] = useState('1');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('');
+  const [examYear, setExamYear] = useState(new Date().getFullYear().toString());
   const [examType, setExamType] = useState('CT'); // 'CT', 'SEMESTER_FINAL'
   const [ctNumber, setCtNumber] = useState('1');
   const [setName, setSetName] = useState('A');
@@ -137,6 +138,7 @@ export default function ContributePage() {
       formData.append('departmentId', selectedDeptId);
       formData.append('courseId', selectedCourseId);
       if (selectedSessionId) formData.append('universitySessionId', selectedSessionId);
+      formData.append('examSessionId', examYear || new Date().getFullYear().toString());
       formData.append('examTypeId', examType);
       if (examType === 'CT') {
         formData.append('ctNumber', ctNumber);
@@ -173,6 +175,9 @@ export default function ContributePage() {
       setFeedback({
         type: 'error',
         message: err.message || 'Failed to submit question paper.',
+        details: err.message?.toLowerCase().includes('validation')
+          ? 'Please ensure all required fields (Department, Course, Exam Type, and Question Paper file) are properly filled.'
+          : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -242,20 +247,29 @@ export default function ContributePage() {
                 </p>
                 <p className="text-[11px] text-cyan-300/80">
                   {user
-                    ? 'Verified contributor profile linked to your submission.'
+                    ? user.email_verified_at
+                      ? 'Verified contributor profile linked to your submission.'
+                      : 'EduMail verification pending. Please verify your EduMail for full account verification.'
                     : 'You do not need to be an admin. Valid new submissions are auto-published to the question bank!'}
                 </p>
               </div>
             </div>
 
-            {!user && (
+            {!user ? (
               <Link
                 to="/login"
                 className="px-3 py-1.5 rounded-xl glass-pill text-xs font-semibold text-slate-300 hover:text-white hover:border-cyan-400/50"
               >
                 Sign In with EduMail (Optional)
               </Link>
-            )}
+            ) : !user.email_verified_at ? (
+              <Link
+                to="/login"
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-semibold hover:bg-amber-500/30"
+              >
+                Verify EduMail
+              </Link>
+            ) : null}
           </div>
 
           {/* Feedback Banner */}
@@ -402,6 +416,22 @@ export default function ContributePage() {
                   <option value="SEMESTER_FINAL" className="bg-slate-900 text-white">
                     Semester Final Examination
                   </option>
+                </select>
+              </div>
+
+              {/* Exam Year / Session */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Exam Held Year *</label>
+                <select
+                  value={examYear}
+                  onChange={(e) => setExamYear(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
+                >
+                  {['2026', '2025', '2024', '2023', '2022', '2021', '2020'].map((yr) => (
+                    <option key={yr} value={yr} className="bg-slate-900 text-white">
+                      {yr} Exam
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

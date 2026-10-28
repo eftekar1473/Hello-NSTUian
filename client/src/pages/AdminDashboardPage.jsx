@@ -23,6 +23,10 @@ import {
   X,
   Search,
   BookOpen,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
 } from 'lucide-react';
 import DepartmentCard from '../components/DepartmentCard';
 
@@ -37,6 +41,8 @@ export default function AdminDashboardPage() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [deptAdmins, setDeptAdmins] = useState([]);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [copiedAdminId, setCopiedAdminId] = useState(null);
 
   // Role Assignment State (Super Admin)
   const [targetUserId, setTargetUserId] = useState('');
@@ -1642,6 +1648,7 @@ export default function AdminDashboardPage() {
                     <th className="p-3.5">Department</th>
                     <th className="p-3.5">EduMail</th>
                     <th className="p-3.5">Roll</th>
+                    <th className="p-3.5">Configured Password</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5 text-right">Verification Action</th>
                   </tr>
@@ -1654,6 +1661,43 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="p-3.5 font-mono text-cyan-300">{adm.email}</td>
                       <td className="p-3.5 font-mono text-slate-300">{adm.roll || 'N/A'}</td>
+                      <td className="p-3.5">
+                        <div className="inline-flex items-center gap-1.5 font-mono text-[11px] bg-slate-900/60 px-2 py-1 rounded-lg border border-amber-500/20">
+                          <span className="text-amber-300 font-bold select-all tracking-wider">
+                            {visiblePasswords[adm.id] ? (adm.password || 'NstuAdmin@2026') : '••••••••••••'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setVisiblePasswords((prev) => ({ ...prev, [adm.id]: !prev[adm.id] }))
+                            }
+                            title={visiblePasswords[adm.id] ? 'Hide password' : 'Show password'}
+                            className="p-0.5 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                          >
+                            {visiblePasswords[adm.id] ? (
+                              <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(adm.password || 'NstuAdmin@2026');
+                              setCopiedAdminId(adm.id);
+                              setTimeout(() => setCopiedAdminId(null), 2000);
+                            }}
+                            title="Copy password to clipboard"
+                            className="p-0.5 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                          >
+                            {copiedAdminId === adm.id ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
                       <td className="p-3.5">
                         {adm.is_verified ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">

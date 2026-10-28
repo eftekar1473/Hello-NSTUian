@@ -57,7 +57,14 @@ async function request(endpoint, options = {}) {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.message || data.error || `HTTP error ${res.status}`);
+    let errorMsg = data.message;
+    if (!errorMsg && Array.isArray(data.issues) && data.issues.length > 0) {
+      errorMsg = data.issues.map((i) => i.message || `${i.path?.join('.')}: invalid`).join(', ');
+    }
+    if (!errorMsg) {
+      errorMsg = data.error || `HTTP error ${res.status}`;
+    }
+    throw new Error(errorMsg);
   }
 
   return data;
@@ -81,6 +88,7 @@ export const api = {
   // Auth
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  verifyEmail: (body) => request('/auth/verify-email', { method: 'POST', body: JSON.stringify(body) }),
   getMe: () => request('/auth/me'),
   changePassword: (body) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
 

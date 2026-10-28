@@ -235,7 +235,12 @@ export async function submitUpload(req, res) {
     });
   } catch (err) {
     if (err.name === 'ZodError') {
-      return res.status(400).json({ error: 'Validation Error', issues: err.issues });
+      const issueDetails = err.issues.map((i) => i.message).join(', ');
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: `Validation failed: ${issueDetails}`,
+        issues: err.issues,
+      });
     }
     console.error('submitUpload error:', err);
     return res.status(500).json({ error: 'Server Error', message: 'Failed to process question upload.' });

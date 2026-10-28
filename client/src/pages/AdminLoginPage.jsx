@@ -141,7 +141,7 @@ export default function AdminLoginPage() {
               onClick={() => handleQuickAdminLogin('iitadmin@nstu.edu.bd', 'NstuAdmin@2026')}
               className="py-1.5 px-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-[11px] font-medium text-left truncate cursor-pointer"
             >
-              IIT Dept Admin
+              Dept Admin
             </button>
             <button
               type="button"

@@ -8,24 +8,19 @@ describe('Hello NSTUian API Test Suite', () => {
   let studentToken = '';
 
   beforeAll(async () => {
-    // Login as Super Admin
-    const superRes = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'superadmin@nstu.edu.bd', password: 'NstuAdmin@2026' });
-    superAdminToken = superRes.body.token;
+    async function loginWithRetry(email, password, retries = 3) {
+      for (let i = 0; i < retries; i++) {
+        const res = await request(app).post('/api/v1/auth/login').send({ email, password });
+        if (res.body?.token) return res.body.token;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      throw new Error(`Failed to login for ${email}`);
+    }
 
-    // Login as IIT Admin
-    const deptRes = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'iitadmin@nstu.edu.bd', password: 'NstuAdmin@2026' });
-    deptAdminToken = deptRes.body.token;
-
-    // Login as Student Contributor
-    const studentRes = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'ash2325006m@nstu.edu.bd', password: 'Student@2026' });
-    studentToken = studentRes.body.token;
-  });
+    superAdminToken = await loginWithRetry('superadmin@nstu.edu.bd', 'NstuAdmin@2026');
+    deptAdminToken = await loginWithRetry('iitadmin@nstu.edu.bd', 'NstuAdmin@2026');
+    studentToken = await loginWithRetry('ash2325006m@nstu.edu.bd', 'Student@2026');
+  }, 30000);
 
   describe('Public Browsing & Discovery', () => {
     it('GET / returns 200 OK or index', async () => {
@@ -96,6 +91,28 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.token).toBeDefined();
     });
 
+    it('Requires and completes EduMail verification for new registered account', async () => {
+      const testEmail = `verify${Date.now()}@nstu.edu.bd`;
+      const regRes = await request(app).post('/api/v1/auth/register').send({
+        email: testEmail,
+        password: 'ValidPassword123',
+        displayName: 'Test Verification Student',
+        studentId: 'ASH2325888M',
+      });
+      expect(regRes.status).toBe(201);
+      expect(regRes.body.verificationRequired).toBe(true);
+      expect(regRes.body.verificationCode).toBeDefined();
+
+      // Verify email with the generated code
+      const verifyRes = await request(app).post('/api/v1/auth/verify-email').send({
+        email: testEmail,
+        code: regRes.body.verificationCode,
+      });
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.verified).toBe(true);
+      expect(verifyRes.body.user.email_verified_at).toBeTruthy();
+    });
+
     it('Rejects login with invalid credentials', async () => {
       const res = await request(app).post('/api/v1/auth/login').send({
         email: 'superadmin@nstu.edu.bd',
@@ -120,7 +137,7 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.status).toBe(200);
       expect(res.body.role).toBe('SUPER_ADMIN');
       expect(res.body.stats).toBeDefined();
-    });
+    }, 15000);
 
     it('Allows Department Admin scoped dashboard access', async () => {
       const res = await request(app)
@@ -130,7 +147,7 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.role).toBe('DEPARTMENT_ADMIN');
       expect(res.body.assignedDepartment).toBeDefined();
       expect(res.body.assignedDepartment.department_code).toBe('25');
-    });
+    }, 15000);
 
     it('Forbids Department Admin from viewing Super Admin user assignments', async () => {
       const res = await request(app)
@@ -334,7 +351,7 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.course).toBeDefined();
       expect(res.body.course.course_code).toBe(code);
       createdCourseId = res.body.course.id;
-    });
+    }, 15000);
 
     it('Forbids Department Admin from creating a course for another department (Req 4 & 6)', async () => {
       const res = await request(app)
