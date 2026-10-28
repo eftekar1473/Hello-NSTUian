@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 
 import authRouter from './modules/auth/auth.router.js';
 import departmentRouter from './modules/departments/department.router.js';
+import courseRouter from './modules/courses/course.router.js';
 import questionRouter from './modules/questions/question.router.js';
 import uploadRouter from './modules/uploads/upload.router.js';
 import correctionRouter from './modules/corrections/correction.router.js';
@@ -55,6 +56,7 @@ const uploadLimiter = rateLimit({
 // API Routes
 app.use('/api/v1/auth', authLimiter, authRouter);
 app.use('/api/v1/departments', departmentRouter);
+app.use('/api/v1/courses', courseRouter);
 app.use('/api/v1', questionRouter);
 app.use('/api/v1/uploads', uploadLimiter, uploadRouter);
 app.use('/api/v1/correction-requests', correctionRouter);

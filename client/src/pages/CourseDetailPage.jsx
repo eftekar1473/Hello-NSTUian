@@ -22,7 +22,7 @@ export default function CourseDetailPage() {
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedType, setSelectedType] = useState('ALL'); // ALL, CT, SEMESTER_FINAL, MIDTERM
+  const [selectedType, setSelectedType] = useState('ALL'); // ALL, CT, SEMESTER_FINAL
   const [selectedCT, setSelectedCT] = useState('ALL'); // ALL, 1, 2, 3
 
   // Modals
@@ -102,7 +102,7 @@ export default function CourseDetailPage() {
           </h1>
 
           <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-            Access previous Continuous Assessment (CT) papers, set variants (Set A, Set B, Set C), and semester
+            Access previous Class Test (CT) papers, set variants (Set A, Set B, Set C), and semester
             final exams. All questions are publicly accessible and verified.
           </p>
         </div>
@@ -130,7 +130,7 @@ export default function CourseDetailPage() {
                   : 'glass-pill text-slate-300 hover:text-white hover:border-cyan-400/50'
               }`}
             >
-              Continuous Tests (CT)
+              Class Tests (CT)
             </button>
             <button
               onClick={() => setSelectedType('SEMESTER_FINAL')}
@@ -208,10 +208,6 @@ export default function CourseDetailPage() {
                       }`}
                     >
                       {isCT ? `CT-${q.ct_number || '1'} Set ${q.set_name || 'A'}` : 'Semester Final'}
-                    </span>
-
-                    <span className="text-xs font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                      Exam: {q.exam_session?.label}
                     </span>
                   </div>
 

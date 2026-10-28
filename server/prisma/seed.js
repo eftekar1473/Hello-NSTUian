@@ -9,10 +9,10 @@ async function main() {
   // 1. Exam Types
   const ctType = await prisma.examType.upsert({
     where: { code: 'CT' },
-    update: {},
+    update: { name: 'Class Test (CT)' },
     create: {
       code: 'CT',
-      name: 'Continuous Assessment (CT)',
+      name: 'Class Test (CT)',
       requires_ct_number: true,
       is_active: true,
     },
@@ -29,15 +29,9 @@ async function main() {
     },
   });
 
-  const midtermType = await prisma.examType.upsert({
+  // Ensure MIDTERM is removed
+  await prisma.examType.deleteMany({
     where: { code: 'MIDTERM' },
-    update: {},
-    create: {
-      code: 'MIDTERM',
-      name: 'Midterm Examination',
-      requires_ct_number: false,
-      is_active: true,
-    },
   });
 
   // 2. University Sessions

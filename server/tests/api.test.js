@@ -262,4 +262,145 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.logs.length).toBeGreaterThan(0);
     });
   });
+
+  describe('Department Admin & Super Admin Permissions (Requirements 3, 4, 5, 6)', () => {
+    let createdCourseId = '';
+    let otherDeptCourseId = '';
+
+    it('Forbids Department Admin from creating, updating, or deleting departments (Req 3)', async () => {
+      // Attempt creation as dept admin
+      const createRes = await request(app)
+        .post('/api/v1/departments')
+        .set('Authorization', `Bearer ${deptAdminToken}`)
+        .field('name', 'Forbidden Department')
+        .field('department_code', '99');
+      expect(createRes.status).toBe(403);
+
+      // Attempt update as dept admin
+      const updateRes = await request(app)
+        .patch('/api/v1/departments/25')
+        .set('Authorization', `Bearer ${deptAdminToken}`)
+        .field('name', 'Unauthorized Name Change');
+      expect(updateRes.status).toBe(403);
+
+      // Attempt deletion as dept admin
+      const deleteRes = await request(app)
+        .delete('/api/v1/departments/25')
+        .set('Authorization', `Bearer ${deptAdminToken}`);
+      expect(deleteRes.status).toBe(403);
+    });
+
+    it('Allows Super Admin to create, update, and delete departments (Req 3)', async () => {
+      // Super Admin creates a test department
+      const createRes = await request(app)
+        .post('/api/v1/departments')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .field('name', 'Temporary Admin Test Dept')
+        .field('department_code', '88')
+        .field('abbreviation', 'TATD');
+      expect([201, 409]).toContain(createRes.status);
+
+      const deptId = createRes.body.department?.id;
+      if (deptId) {
+        // Super Admin updates it
+        const updateRes = await request(app)
+          .patch(`/api/v1/departments/${deptId}`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .field('name', 'Updated Temp Dept');
+        expect(updateRes.status).toBe(200);
+
+        // Super Admin deletes it
+        const deleteRes = await request(app)
+          .delete(`/api/v1/departments/${deptId}`)
+          .set('Authorization', `Bearer ${superAdminToken}`);
+        expect(deleteRes.status).toBe(200);
+      }
+    }, 15000);
+
+    it('Allows Department Admin to create a course for their assigned department (Req 4)', async () => {
+      const code = `TEST${Date.now().toString().slice(-4)}`;
+      const res = await request(app)
+        .post('/api/v1/courses')
+        .set('Authorization', `Bearer ${deptAdminToken}`)
+        .send({
+          departmentId: '25', // IIT (their assigned department)
+          semesterNumber: 1,
+          courseCode: code,
+          courseTitle: 'Introduction to Automated Testing',
+          credit: 3.0,
+          description: 'Testing course creation permissions.',
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.course).toBeDefined();
+      expect(res.body.course.course_code).toBe(code);
+      createdCourseId = res.body.course.id;
+    });
+
+    it('Forbids Department Admin from creating a course for another department (Req 4 & 6)', async () => {
+      const res = await request(app)
+        .post('/api/v1/courses')
+        .set('Authorization', `Bearer ${deptAdminToken}`)
+        .send({
+          departmentId: '01', // CSTE (not their department)
+          semesterNumber: 1,
+          courseCode: 'FORBIDDEN 101',
+          courseTitle: 'Should Fail',
+          credit: 3.0,
+        });
+      expect(res.status).toBe(403);
+    });
+
+    it('Allows Department Admin to edit their assigned department course (Req 4)', async () => {
+      expect(createdCourseId).toBeTruthy();
+      const res = await request(app)
+        .patch(`/api/v1/courses/${createdCourseId}`)
+        .set('Authorization', `Bearer ${deptAdminToken}`)
+        .send({
+          courseTitle: 'Advanced Automated Testing Principles',
+          credit: 4.0,
+        });
+      expect(res.status).toBe(200);
+      expect(res.body.course.course_title).toBe('Advanced Automated Testing Principles');
+    });
+
+    it('Allows Department Admin to delete their course (Req 4)', async () => {
+      expect(createdCourseId).toBeTruthy();
+      const res = await request(app)
+        .delete(`/api/v1/courses/${createdCourseId}`)
+        .set('Authorization', `Bearer ${deptAdminToken}`);
+      expect(res.status).toBe(200);
+    });
+
+    it('Allows Super Admin to create, edit, and delete courses across any department (Req 5)', async () => {
+      // Super admin creates course in department 01 (CSTE)
+      const csteCode = `SUP${Date.now().toString().slice(-4)}`;
+      const createRes = await request(app)
+        .post('/api/v1/courses')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          departmentId: '01',
+          semesterNumber: 2,
+          courseCode: csteCode,
+          courseTitle: 'Super Admin Created Course',
+          credit: 3.0,
+        });
+      expect(createRes.status).toBe(201);
+      otherDeptCourseId = createRes.body.course.id;
+
+      // Super admin updates it
+      const updateRes = await request(app)
+        .patch(`/api/v1/courses/${otherDeptCourseId}`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          courseTitle: 'Super Admin Edited Course',
+        });
+      expect(updateRes.status).toBe(200);
+
+      // Super admin deletes it
+      const deleteRes = await request(app)
+        .delete(`/api/v1/courses/${otherDeptCourseId}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+      expect(deleteRes.status).toBe(200);
+    }, 15000);
+  });
 });

@@ -31,7 +31,7 @@ export const uploadQuestionSchema = z.object({
   departmentId: z.string().min(1, 'Department is required'),
   courseId: z.string().min(1, 'Course is required'),
   universitySessionId: z.string().optional().nullable(),
-  examSessionId: z.string().min(1, 'Exam Session / Year is required'),
+  examSessionId: z.string().optional().nullable(),
   examTypeId: z.string().min(1, 'Exam Type is required'),
   ctNumber: z.coerce.number().int().min(1).max(10).optional().nullable(),
   setName: z.string().max(20).optional().nullable(),

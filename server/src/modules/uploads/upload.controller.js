@@ -66,19 +66,20 @@ export async function submitUpload(req, res) {
       return res.status(404).json({ error: 'Not Found', message: 'Selected exam type not found.' });
     }
 
-    // Resolve Exam Session (by UUID or label)
+    // Resolve Exam Session (by UUID or label, defaulting to current year if omitted)
+    const examSessionLabel = validated.examSessionId?.trim() || new Date().getFullYear().toString();
     let examSession = await prisma.examSession.findFirst({
       where: {
-        OR: [{ id: validated.examSessionId }, { label: validated.examSessionId }],
+        OR: [{ id: examSessionLabel }, { label: examSessionLabel }],
       },
     });
 
     if (!examSession) {
-      // Create exam session on the fly if needed (e.g. 2025)
+      // Create exam session on the fly if needed
       examSession = await prisma.examSession.create({
         data: {
-          label: validated.examSessionId,
-          academic_year: validated.examSessionId,
+          label: examSessionLabel,
+          academic_year: examSessionLabel,
         },
       });
     }

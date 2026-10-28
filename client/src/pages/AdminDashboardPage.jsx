@@ -22,6 +22,7 @@ import {
   Trash2,
   X,
   Search,
+  BookOpen,
 } from 'lucide-react';
 import DepartmentCard from '../components/DepartmentCard';
 
@@ -71,6 +72,30 @@ export default function AdminDashboardPage() {
   const [newAdminName, setNewAdminName] = useState('');
   const [deptAdminMessage, setDeptAdminMessage] = useState('');
 
+  // Course Management State (Dept Admin & Super Admin)
+  const [coursesList, setCoursesList] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
+  const [selectedCourseDeptId, setSelectedCourseDeptId] = useState('');
+  const [selectedCourseSemester, setSelectedCourseSemester] = useState('ALL');
+  const [courseSearch, setCourseSearch] = useState('');
+  const [courseMessage, setCourseMessage] = useState({ type: '', text: '' });
+
+  // New Course Form State
+  const [newCourseCode, setNewCourseCode] = useState('');
+  const [newCourseTitle, setNewCourseTitle] = useState('');
+  const [newCourseSemester, setNewCourseSemester] = useState('1');
+  const [newCourseCredit, setNewCourseCredit] = useState('3.0');
+  const [newCourseDesc, setNewCourseDesc] = useState('');
+
+  // Edit Course Modal State
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [editCourseCode, setEditCourseCode] = useState('');
+  const [editCourseTitle, setEditCourseTitle] = useState('');
+  const [editCourseSemester, setEditCourseSemester] = useState('1');
+  const [editCourseCredit, setEditCourseCredit] = useState('3.0');
+  const [editCourseDesc, setEditCourseDesc] = useState('');
+  const [editCourseMessage, setEditCourseMessage] = useState('');
+
   // Change Password State
   const [currPassword, setCurrPassword] = useState('');
   const [newPasswordVal, setNewPasswordVal] = useState('');
@@ -111,6 +136,19 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const loadCourses = async (deptId) => {
+    if (!deptId) return;
+    setCoursesLoading(true);
+    try {
+      const res = await api.getCourses({ departmentId: deptId });
+      setCoursesList(res.courses || []);
+    } catch (err) {
+      console.error('Failed to load courses:', err);
+    } finally {
+      setCoursesLoading(false);
+    }
+  };
+
   const loadData = async () => {
     try {
       const [dash, ups, cors, logs, depts] = await Promise.all([
@@ -125,11 +163,21 @@ export default function AdminDashboardPage() {
       setUploadsQueue(ups.uploads || []);
       setCorrectionsQueue(cors.corrections || []);
       setAuditLogs(logs.logs || []);
-      setDepartments(depts.departments || []);
 
-      if (depts.departments?.length > 0) {
-        setAssignDeptId(depts.departments[0].id);
-        setNewAdminDeptId(depts.departments[0].id);
+      const allDepts = depts.departments || [];
+      const userDeptId = dash.assignedDepartment?.id || user?.admin_permissions?.find((p) => p.role === 'DEPARTMENT_ADMIN')?.department_id;
+      const scopedDepts = isSuperAdmin ? allDepts : allDepts.filter((d) => d.id === userDeptId);
+      setDepartments(scopedDepts);
+
+      const targetDeptId = isSuperAdmin ? (selectedCourseDeptId || allDepts[0]?.id || '') : (userDeptId || '');
+      setSelectedCourseDeptId(targetDeptId);
+      if (targetDeptId) {
+        await loadCourses(targetDeptId);
+      }
+
+      if (isSuperAdmin && allDepts.length > 0) {
+        setAssignDeptId(allDepts[0].id);
+        setNewAdminDeptId(allDepts[0].id);
       }
 
       if (isSuperAdmin) {
@@ -294,6 +342,93 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Course Management Handlers (Requirements 4 & 5)
+  const handleCreateCourse = async (e) => {
+    e.preventDefault();
+    setActionLoading(true);
+    setCourseMessage({ type: '', text: '' });
+    try {
+      const userDeptId = statsData?.assignedDepartment?.id || user?.admin_permissions?.find((p) => p.role === 'DEPARTMENT_ADMIN')?.department_id;
+      const deptToUse = isSuperAdmin ? selectedCourseDeptId : userDeptId;
+      if (!deptToUse) {
+        throw new Error('Target department is required.');
+      }
+      await api.createCourse({
+        departmentId: deptToUse,
+        semesterNumber: parseInt(newCourseSemester, 10),
+        courseCode: newCourseCode.trim(),
+        courseTitle: newCourseTitle.trim(),
+        credit: parseFloat(newCourseCredit) || 3.0,
+        description: newCourseDesc.trim() || undefined,
+      });
+      setCourseMessage({ type: 'success', text: `Course "${newCourseCode}" created successfully!` });
+      setNewCourseCode('');
+      setNewCourseTitle('');
+      setNewCourseDesc('');
+      await loadCourses(deptToUse);
+      await loadData();
+    } catch (err) {
+      setCourseMessage({ type: 'error', text: err.message || 'Failed to create course.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const startEditCourse = (course) => {
+    setEditingCourse(course);
+    setEditCourseCode(course.course_code || '');
+    setEditCourseTitle(course.course_title || '');
+    setEditCourseSemester(course.semester_number?.toString() || '1');
+    setEditCourseCredit(course.credit?.toString() || '3.0');
+    setEditCourseDesc(course.description || '');
+    setEditCourseMessage('');
+  };
+
+  const handleUpdateCourse = async (e) => {
+    e.preventDefault();
+    if (!editingCourse) return;
+    setActionLoading(true);
+    setEditCourseMessage('');
+    try {
+      const userDeptId = statsData?.assignedDepartment?.id || user?.admin_permissions?.find((p) => p.role === 'DEPARTMENT_ADMIN')?.department_id;
+      const deptToUse = isSuperAdmin ? selectedCourseDeptId : userDeptId;
+      await api.updateCourse(editingCourse.id, {
+        courseCode: editCourseCode.trim(),
+        courseTitle: editCourseTitle.trim(),
+        semesterNumber: parseInt(editCourseSemester, 10),
+        credit: parseFloat(editCourseCredit) || 3.0,
+        description: editCourseDesc.trim() || undefined,
+      });
+      setEditCourseMessage('Course updated successfully!');
+      setTimeout(() => setEditingCourse(null), 800);
+      await loadCourses(deptToUse);
+      await loadData();
+    } catch (err) {
+      setEditCourseMessage(`Error: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteCourse = async (course) => {
+    if (!window.confirm(`Are you sure you want to delete course "${course.course_code} - ${course.course_title}"?`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const userDeptId = statsData?.assignedDepartment?.id || user?.admin_permissions?.find((p) => p.role === 'DEPARTMENT_ADMIN')?.department_id;
+      const deptToUse = isSuperAdmin ? selectedCourseDeptId : userDeptId;
+      const res = await api.deleteCourse(course.id);
+      alert(res.message || 'Course deleted successfully.');
+      await loadCourses(deptToUse);
+      await loadData();
+    } catch (err) {
+      alert(`Failed to delete course: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Set Dept Admin Handler (Super Admin)
   const handleSetDeptAdmin = async (e) => {
     e.preventDefault();
@@ -389,13 +524,23 @@ export default function AdminDashboardPage() {
             Corrections ({correctionsQueue.length})
           </button>
           <button
-            onClick={() => setActiveTab('departments')}
+            onClick={() => setActiveTab('courses')}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer ${
-              activeTab === 'departments' ? 'bg-blue-600 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
+              activeTab === 'courses' ? 'bg-cyan-500 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
             }`}
           >
-            Manage Departments
+            Manage Courses ({coursesList.length})
           </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => setActiveTab('departments')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl cursor-pointer ${
+                activeTab === 'departments' ? 'bg-blue-600 text-white shadow-glass-glow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Manage Departments
+            </button>
+          )}
           {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('dept-admins')}
@@ -450,8 +595,17 @@ export default function AdminDashboardPage() {
           <p className="text-2xl font-bold text-emerald-400 mt-1">{statsData?.stats?.pendingCorrectionsCount ?? 0}</p>
         </div>
         <div className="p-4 rounded-2xl glass-card">
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Active Departments</span>
-          <p className="text-2xl font-bold text-purple-400 mt-1">{departments.length}</p>
+          {isSuperAdmin ? (
+            <>
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Active Departments</span>
+              <p className="text-2xl font-bold text-purple-400 mt-1">{departments.length}</p>
+            </>
+          ) : (
+            <>
+              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Department Courses</span>
+              <p className="text-2xl font-bold text-cyan-300 mt-1">{coursesList.length}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -491,7 +645,7 @@ export default function AdminDashboardPage() {
                         </span>
                       </div>
                       <p className="text-xs text-slate-400 mt-1">
-                        Department: {up.department?.name} • Year {up.exam_session?.label} • Filename:{' '}
+                        Department: {up.department?.name} • Filename:{' '}
                         <span className="font-mono text-cyan-300">{up.original_filename}</span>
                       </p>
                     </div>
@@ -604,8 +758,421 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* TAB 3: MANAGE DEPARTMENTS (Requirement 2) */}
-      {activeTab === 'departments' && (
+      {/* TAB 3: MANAGE COURSES (Requirements 4, 5, 6) */}
+      {activeTab === 'courses' && (
+        <div className="space-y-8">
+          {/* Top Panel: Header & Department Selector */}
+          <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-cyan-500/30 bg-[#0a142e]/90 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-cyan-400" />
+                  <span>Academic Course Management</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Create, update, or remove academic courses for each semester curriculum.
+                </p>
+              </div>
+
+              {/* Department Context Badge or Selector */}
+              {isSuperAdmin ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-300">Department:</span>
+                  <select
+                    value={selectedCourseDeptId}
+                    onChange={(e) => {
+                      setSelectedCourseDeptId(e.target.value);
+                      loadCourses(e.target.value);
+                    }}
+                    className="p-2 rounded-xl glass-input text-white text-xs bg-slate-900 border border-cyan-400/40"
+                  >
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id} className="bg-slate-900 text-white">
+                        {d.name} ({d.abbreviation || d.department_code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                    🏛️ {statsData?.assignedDepartment?.name} ({statsData?.assignedDepartment?.department_code})
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Course Creation Feedback Alert */}
+            {courseMessage.text && (
+              <div
+                className={`p-3 rounded-xl text-xs ${
+                  courseMessage.type === 'error'
+                    ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+                    : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-200'
+                }`}
+              >
+                {courseMessage.text}
+              </div>
+            )}
+
+            {/* Add Course Form */}
+            <form onSubmit={handleCreateCourse} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Course Code *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. IIT 1101 or CSE 2101"
+                    value={newCourseCode}
+                    onChange={(e) => setNewCourseCode(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400 font-mono uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Course Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Structured Programming Language"
+                    value={newCourseTitle}
+                    onChange={(e) => setNewCourseTitle(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Academic Semester *
+                  </label>
+                  <select
+                    value={newCourseSemester}
+                    onChange={(e) => setNewCourseSemester(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs bg-slate-900"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                      <option key={s} value={s} className="bg-slate-900 text-white">
+                        Semester {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Credit Value
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder="3.0"
+                    value={newCourseCredit}
+                    onChange={(e) => setNewCourseCredit(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Course Description (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Brief curriculum overview or course syllabus notes..."
+                  value={newCourseDesc}
+                  onChange={(e) => setNewCourseDesc(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-glass-glow disabled:opacity-50 transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Course to Curriculum</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Courses Directory Section */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>Courses Directory ({coursesList.length})</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Select a semester or search to manage and edit existing courses.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-full sm:w-56">
+                  <Search className="w-3.5 h-3.5 text-cyan-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by code or title..."
+                    value={courseSearch}
+                    onChange={(e) => setCourseSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Semester Filter Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
+              <span className="text-[11px] text-slate-400 uppercase font-mono mr-1">Semester:</span>
+              <button
+                onClick={() => setSelectedCourseSemester('ALL')}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                  selectedCourseSemester === 'ALL'
+                    ? 'bg-cyan-500 text-white shadow-sm'
+                    : 'glass-pill text-slate-300 hover:text-white'
+                }`}
+              >
+                All Semesters
+              </button>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSelectedCourseSemester(s.toString())}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                    selectedCourseSemester === s.toString()
+                      ? 'bg-cyan-500 text-white shadow-sm'
+                      : 'glass-pill text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Sem {s}
+                </button>
+              ))}
+            </div>
+
+            {/* Courses Grid */}
+            {coursesLoading ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-cyan-400" />
+                <span>Loading courses...</span>
+              </div>
+            ) : coursesList.filter((c) => {
+                if (selectedCourseSemester !== 'ALL' && c.semester_number !== parseInt(selectedCourseSemester, 10)) {
+                  return false;
+                }
+                if (courseSearch) {
+                  const q = courseSearch.toLowerCase();
+                  const matchCode = c.course_code?.toLowerCase().includes(q);
+                  const matchTitle = c.course_title?.toLowerCase().includes(q);
+                  if (!matchCode && !matchTitle) return false;
+                }
+                return true;
+              }).length === 0 ? (
+              <div className="p-12 text-center rounded-3xl glass-card text-slate-400 text-xs">
+                <BookOpen className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                <span>No courses found for this criteria. Use the form above to add one.</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {coursesList
+                  .filter((c) => {
+                    if (selectedCourseSemester !== 'ALL' && c.semester_number !== parseInt(selectedCourseSemester, 10)) {
+                      return false;
+                    }
+                    if (courseSearch) {
+                      const q = courseSearch.toLowerCase();
+                      const matchCode = c.course_code?.toLowerCase().includes(q);
+                      const matchTitle = c.course_title?.toLowerCase().includes(q);
+                      if (!matchCode && !matchTitle) return false;
+                    }
+                    return true;
+                  })
+                  .map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-4 rounded-2xl glass-card flex flex-col justify-between hover:border-cyan-400/50 transition-all space-y-3"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-blue-500/20 text-cyan-300 border border-blue-500/30">
+                            {c.course_code}
+                          </span>
+                          <span className="text-[11px] font-semibold text-slate-300 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/10">
+                            Semester {c.semester_number || 'N/A'}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-white text-sm leading-snug line-clamp-2">
+                          {c.course_title}
+                        </h4>
+                        {c.description && (
+                          <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                            {c.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-slate-400 text-[11px]">
+                          <span>{c.credit || 3.0} Credits</span>
+                          <span>•</span>
+                          <span>{c.total_questions || 0} Questions</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => startEditCourse(c)}
+                            className="p-1.5 rounded-lg text-slate-300 hover:text-cyan-300 hover:bg-cyan-500/20 transition-colors cursor-pointer"
+                            title="Edit Course"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCourse(c)}
+                            className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+                            title="Delete Course"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Edit Course Modal */}
+          {editingCourse && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+              <div className="relative w-full max-w-lg rounded-3xl glass-panel p-6 border border-cyan-400/40 bg-[#0a142e]/95 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Edit3 className="w-5 h-5 text-cyan-400" />
+                    <span>Edit Course: {editingCourse.course_code}</span>
+                  </h3>
+                  <button
+                    onClick={() => setEditingCourse(null)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {editCourseMessage && (
+                  <div
+                    className={`p-2.5 rounded-xl text-xs ${
+                      editCourseMessage.startsWith('Error')
+                        ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+                        : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-200'
+                    }`}
+                  >
+                    {editCourseMessage}
+                  </div>
+                )}
+
+                <form onSubmit={handleUpdateCourse} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Course Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCourseCode}
+                      onChange={(e) => setEditCourseCode(e.target.value)}
+                      className="w-full p-2.5 rounded-xl glass-input text-white text-xs font-mono uppercase"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Course Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCourseTitle}
+                      onChange={(e) => setEditCourseTitle(e.target.value)}
+                      className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Academic Semester *
+                      </label>
+                      <select
+                        value={editCourseSemester}
+                        onChange={(e) => setEditCourseSemester(e.target.value)}
+                        className="w-full p-2.5 rounded-xl glass-input text-white text-xs bg-slate-900"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                          <option key={s} value={s} className="bg-slate-900 text-white">
+                            Semester {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Credit Value
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={editCourseCredit}
+                        onChange={(e) => setEditCourseCredit(e.target.value)}
+                        className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Course Description (Optional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editCourseDesc}
+                      onChange={(e) => setEditCourseDesc(e.target.value)}
+                      className="w-full p-2.5 rounded-xl glass-input text-white text-xs placeholder-slate-400"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingCourse(null)}
+                      className="px-4 py-2 rounded-xl glass-pill text-xs text-slate-300 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={actionLoading}
+                      className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-glass-glow disabled:opacity-50"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 4: MANAGE DEPARTMENTS (Super Admin Only) */}
+      {activeTab === 'departments' && isSuperAdmin && (
         <div className="space-y-8">
           <div className="rounded-3xl glass-panel p-6 sm:p-8 border border-blue-500/30 bg-[#0a142e]/90 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
@@ -783,8 +1350,8 @@ export default function AdminDashboardPage() {
                   <DepartmentCard
                     key={d.id}
                     department={d}
-                    onEdit={startEditDepartment}
-                    onDelete={handleDeleteDepartment}
+                    onEdit={isSuperAdmin ? startEditDepartment : undefined}
+                    onDelete={isSuperAdmin ? handleDeleteDepartment : undefined}
                   />
                 ))}
             </div>

@@ -33,10 +33,9 @@ export default function ContributePage() {
   const [selectedSemester, setSelectedSemester] = useState('1');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('');
-  const [examType, setExamType] = useState('CT'); // 'CT', 'SEMESTER_FINAL', 'MIDTERM'
+  const [examType, setExamType] = useState('CT'); // 'CT', 'SEMESTER_FINAL'
   const [ctNumber, setCtNumber] = useState('1');
   const [setName, setSetName] = useState('A');
-  const [examYear, setExamYear] = useState('2024');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState(null);
@@ -138,7 +137,6 @@ export default function ContributePage() {
       formData.append('departmentId', selectedDeptId);
       formData.append('courseId', selectedCourseId);
       if (selectedSessionId) formData.append('universitySessionId', selectedSessionId);
-      formData.append('examSessionId', examYear);
       formData.append('examTypeId', examType);
       if (examType === 'CT') {
         formData.append('ctNumber', ctNumber);
@@ -399,30 +397,11 @@ export default function ContributePage() {
                   className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
                 >
                   <option value="CT" className="bg-slate-900 text-white">
-                    Continuous Assessment (CT)
+                    Class Test (CT)
                   </option>
                   <option value="SEMESTER_FINAL" className="bg-slate-900 text-white">
                     Semester Final Examination
                   </option>
-                  <option value="MIDTERM" className="bg-slate-900 text-white">
-                    Midterm Examination
-                  </option>
-                </select>
-              </div>
-
-              {/* Examination Year */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Examination Year / Session *</label>
-                <select
-                  value={examYear}
-                  onChange={(e) => setExamYear(e.target.value)}
-                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
-                >
-                  {['2025', '2024', '2023', '2022', '2021', '2020'].map((yr) => (
-                    <option key={yr} value={yr} className="bg-slate-900 text-white">
-                      {yr}
-                    </option>
-                  ))}
                 </select>
               </div>
             </div>
@@ -431,7 +410,7 @@ export default function ContributePage() {
             {examType === 'CT' && (
               <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-cyan-300 mb-1">CT Assessment Number *</label>
+                  <label className="block text-xs font-semibold text-cyan-300 mb-1">Class Test (CT) Number *</label>
                   <select
                     value={ctNumber}
                     onChange={(e) => setCtNumber(e.target.value)}
@@ -566,7 +545,7 @@ export default function ContributePage() {
                       <span className="text-xs text-white font-medium">{up.original_filename}</span>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      {up.department?.name} • Year {up.exam_session?.label}
+                      {up.department?.name}
                     </p>
                     {up.rejection_reason && (
                       <p className="text-[11px] text-amber-300 mt-1">Notice: {up.rejection_reason}</p>

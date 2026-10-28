@@ -76,7 +76,7 @@ export default function HomePage({ onOpenSearch }) {
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">All Departments</h2>
             <p className="text-xs text-slate-400 mt-1">
-              Select your department to access continuous assessment papers (CTs), midterms, and semester finals.
+              Select your department to access class test papers (CTs) and semester finals.
             </p>
           </div>
 

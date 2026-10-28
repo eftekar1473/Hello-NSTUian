@@ -23,9 +23,6 @@ export default function QuestionViewerModal({ question, onClose }) {
               <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-blue-500/20 text-cyan-300 border border-blue-500/30">
                 {question.course?.course_code || 'COURSE'}
               </span>
-              <span className="text-xs text-slate-400">
-                Exam Year: {question.exam_session?.label}
-              </span>
             </div>
             <h3 className="text-lg font-bold text-white mt-1">
               {question.title || `${question.course?.course_title} - ${question.exam_type?.name}`}
@@ -95,11 +92,6 @@ export default function QuestionViewerModal({ question, onClose }) {
                     {question.exam_type?.name}{' '}
                     {question.ct_number ? `(CT-${question.ct_number} Set ${question.set_name || 'Standard'})` : ''}
                   </p>
-                </div>
-
-                <div>
-                  <span className="text-slate-400">Examination Year:</span>
-                  <p className="font-medium text-white">{question.exam_session?.label}</p>
                 </div>
 
                 {latestVersion && (

@@ -90,10 +90,19 @@ export const api = {
   submitCorrection: (formData) => request('/correction-requests', { method: 'POST', body: formData }),
   getMyCorrections: () => request('/correction-requests/my'),
 
-  // Department Management (Admin)
+  // Department Management (Super Admin)
   createDepartment: (formData) => request('/departments', { method: 'POST', body: formData }),
   updateDepartment: (id, formData) => request(`/departments/${id}`, { method: 'PATCH', body: formData }),
   deleteDepartment: (id) => request(`/departments/${id}`, { method: 'DELETE' }),
+
+  // Course Management (Dept Admin & Super Admin)
+  getCourses: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/courses${qs ? `?${qs}` : ''}`);
+  },
+  createCourse: (body) => request('/courses', { method: 'POST', body: JSON.stringify(body) }),
+  updateCourse: (id, body) => request(`/courses/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteCourse: (id) => request(`/courses/${id}`, { method: 'DELETE' }),
 
   // Admin
   getAdminDashboard: () => request('/admin/dashboard'),

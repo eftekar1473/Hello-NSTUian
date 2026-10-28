@@ -184,7 +184,7 @@ export default function SearchModal({ isOpen, onClose }) {
                         {q.title || `${q.course?.course_code} - ${q.exam_type?.name}`}
                       </span>
                       <p className="text-xs text-slate-400">
-                        {q.department?.name} • Year {q.exam_session?.label}
+                        {q.department?.name}
                         {q.ct_number ? ` • CT ${q.ct_number} (${q.set_name || 'Standard'})` : ''}
                       </p>
                     </div>

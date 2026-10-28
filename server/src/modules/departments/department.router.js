@@ -10,7 +10,7 @@ import {
   deleteDepartment,
 } from './department.controller.js';
 import { authenticateToken } from '../../middleware/auth.js';
-import { requireAdmin } from '../../middleware/role.js';
+import { requireSuperAdmin } from '../../middleware/role.js';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -29,9 +29,9 @@ router.get('/', getDepartments);
 router.get('/:id', getDepartmentById);
 router.get('/:id/sessions', getDepartmentSessions);
 
-// Admin-only department creation, update & deletion
-router.post('/', authenticateToken, requireAdmin, upload.single('logo'), createDepartment);
-router.patch('/:id', authenticateToken, requireAdmin, upload.single('logo'), updateDepartment);
-router.delete('/:id', authenticateToken, requireAdmin, deleteDepartment);
+// Super Admin only department creation, update & deletion
+router.post('/', authenticateToken, requireSuperAdmin, upload.single('logo'), createDepartment);
+router.patch('/:id', authenticateToken, requireSuperAdmin, upload.single('logo'), updateDepartment);
+router.delete('/:id', authenticateToken, requireSuperAdmin, deleteDepartment);
 
 export default router;

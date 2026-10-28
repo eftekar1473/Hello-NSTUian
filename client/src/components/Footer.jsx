@@ -59,7 +59,7 @@ export default function Footer() {
             Noakhali-3814, Bangladesh.
           </p>
           <p className="text-[11px] text-slate-500 mt-4">
-            Designed for students, maintained with <Heart className="w-3 h-3 inline text-red-400" /> by you well wisher.
+            Designed for students, maintained with <Heart className="w-3 h-3 inline text-red-400" /> by your well wisher.
           </p>
         </div>
       </div>
