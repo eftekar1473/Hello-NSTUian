@@ -9,7 +9,7 @@
     "dev:client": "npm run dev --prefix client",
     "build:client": "npm install --prefix client && npm run build --prefix client",
     "build:server": "npm install --prefix server && npm run build --prefix server",
-    "build": "npm run build:server && npm run build:client",
+    "build": "node scripts/build.js",
     "start": "npm start --prefix server",
     "test:server": "npm test --prefix server",
     "reset-password": "node server/scripts/reset-password.js"
