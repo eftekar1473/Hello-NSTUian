@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { api, getDownloadUrl } from '../services/api';
 import {
   FileText,
@@ -11,6 +12,10 @@ import {
   ChevronRight,
   ArrowLeft,
   Filter,
+  Edit3,
+  X,
+  CheckCircle,
+  Loader2,
 } from 'lucide-react';
 import QuestionViewerModal from '../components/QuestionViewerModal';
 import CorrectionModal from '../components/CorrectionModal';
@@ -19,8 +24,10 @@ export default function CourseDetailPage() {
   const { courseId } = useParams();
   const [searchParams] = useSearchParams();
   const sessionFilter = searchParams.get('session');
+  const { user, isSuperAdmin } = useAuth();
 
   const [questions, setQuestions] = useState([]);
+  const [courseDetails, setCourseDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState('ALL'); // ALL, CT, SEMESTER_FINAL
   const [selectedCT, setSelectedCT] = useState('ALL'); // ALL, 1, 2, 3
@@ -29,22 +36,81 @@ export default function CourseDetailPage() {
   const [previewQuestion, setPreviewQuestion] = useState(null);
   const [correctionQuestion, setCorrectionQuestion] = useState(null);
 
-  useEffect(() => {
-    async function loadQuestions() {
-      try {
-        const data = await api.getQuestionsByCourse(courseId);
-        setQuestions(data.questions || []);
-      } catch (err) {
-        console.error('Failed to load questions:', err);
-      } finally {
-        setLoading(false);
+  // Edit Course Modal State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editCode, setEditCode] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editSemester, setEditSemester] = useState('1');
+  const [editCredit, setEditCredit] = useState('3.0');
+  const [editDesc, setEditDesc] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editMsg, setEditMsg] = useState({ type: '', text: '' });
+
+  async function loadData() {
+    try {
+      const [qData, cData] = await Promise.all([
+        api.getQuestionsByCourse(courseId).catch(() => ({ questions: [] })),
+        api.getCourseById(courseId).catch(() => ({ course: null })),
+      ]);
+      setQuestions(qData.questions || []);
+      if (cData?.course) {
+        setCourseDetails(cData.course);
       }
+    } catch (err) {
+      console.error('Failed to load course details:', err);
+    } finally {
+      setLoading(false);
     }
-    loadQuestions();
+  }
+
+  useEffect(() => {
+    loadData();
   }, [courseId]);
 
-  const courseInfo = questions[0]?.course || null;
-  const deptInfo = questions[0]?.department || null;
+  const courseInfo = courseDetails || questions[0]?.course || null;
+  const deptInfo = courseDetails?.department || questions[0]?.department || null;
+
+  const isDeptAdminForThis = user?.admin_permissions?.some(
+    (p) =>
+      p.role === 'DEPARTMENT_ADMIN' &&
+      (p.department_id === deptInfo?.id || p.department?.department_code === deptInfo?.department_code)
+  );
+  const canEdit = isSuperAdmin || isDeptAdminForThis;
+
+  const startEditCourse = () => {
+    if (!courseInfo) return;
+    setEditCode(courseInfo.course_code || '');
+    setEditTitle(courseInfo.course_title || '');
+    setEditSemester(courseInfo.semester_number?.toString() || '1');
+    setEditCredit(courseInfo.credit?.toString() || '3.0');
+    setEditDesc(courseInfo.description || '');
+    setEditMsg({ type: '', text: '' });
+    setIsEditing(true);
+  };
+
+  const handleUpdateCourse = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    setEditMsg({ type: '', text: '' });
+    try {
+      await api.updateCourse(courseInfo.id, {
+        courseCode: editCode.trim(),
+        courseTitle: editTitle.trim(),
+        semesterNumber: parseInt(editSemester, 10),
+        credit: parseFloat(editCredit) || 3.0,
+        description: editDesc.trim() || undefined,
+      });
+      setEditMsg({ type: 'success', text: 'Course updated successfully!' });
+      await loadData();
+      setTimeout(() => {
+        setIsEditing(false);
+      }, 700);
+    } catch (err) {
+      setEditMsg({ type: 'error', text: err.message || 'Failed to update course.' });
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   // Filter questions
   const filtered = questions.filter((q) => {
@@ -80,31 +146,50 @@ export default function CourseDetailPage() {
 
       {/* Course Banner */}
       <div className="rounded-3xl glass-panel border border-cyan-400/30 p-6 sm:p-8 bg-gradient-to-r from-[#0c183a]/90 to-[#070e24]/90 shadow-2xl">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs font-bold px-3 py-1 rounded-full bg-blue-500/20 text-cyan-300 border border-blue-500/30">
-              {courseInfo?.course_code || 'COURSE'}
-            </span>
-            {courseInfo?.credit && (
-              <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/10">
-                {courseInfo.credit} Credits
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-3 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs font-bold px-3 py-1 rounded-full bg-blue-500/20 text-cyan-300 border border-blue-500/30">
+                {courseInfo?.course_code || 'COURSE'}
               </span>
-            )}
-            {sessionFilter && (
-              <span className="text-xs text-cyan-400/90 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
-                Session: {sessionFilter}
-              </span>
-            )}
+              {courseInfo?.credit && (
+                <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/10">
+                  {courseInfo.credit} Credits
+                </span>
+              )}
+              {courseInfo?.semester_number && (
+                <span className="text-xs text-slate-400 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/10">
+                  Semester {courseInfo.semester_number}
+                </span>
+              )}
+              {sessionFilter && (
+                <span className="text-xs text-cyan-400/90 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
+                  Session: {sessionFilter}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+              {courseInfo?.course_title || 'Academic Course Examination Papers'}
+            </h1>
+
+            <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
+              {courseInfo?.description ||
+                'Access previous Class Test (CT) papers, set variants (Set A, Set B, Set C), and semester final exams. All questions are publicly accessible and verified.'}
+            </p>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-            {courseInfo?.course_title || 'Academic Course Examination Papers'}
-          </h1>
-
-          <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-            Access previous Class Test (CT) papers, set variants (Set A, Set B, Set C), and semester
-            final exams. All questions are publicly accessible and verified.
-          </p>
+          {canEdit && courseInfo && (
+            <div className="flex-shrink-0">
+              <button
+                onClick={startEditCourse}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-300 border border-cyan-400/40 text-xs font-bold transition-all shadow-glass-glow cursor-pointer"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Edit Course</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Filter Bar */}
@@ -271,6 +356,119 @@ export default function CourseDetailPage() {
             alert('Correction request submitted! An administrator will review your proposed changes.');
           }}
         />
+      )}
+
+      {/* Edit Course Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg rounded-3xl glass-panel p-6 border border-cyan-400/40 bg-[#0a142e]/95 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-cyan-400" />
+                <span>Edit Course: {courseInfo?.course_code}</span>
+              </h3>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editMsg.text && (
+              <div
+                className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                  editMsg.type === 'error'
+                    ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+                    : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-200'
+                }`}
+              >
+                {editMsg.type === 'success' && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                <span>{editMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateCourse} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Course Code *</label>
+                <input
+                  type="text"
+                  required
+                  value={editCode}
+                  onChange={(e) => setEditCode(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs font-mono uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Course Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Semester *</label>
+                  <select
+                    value={editSemester}
+                    onChange={(e) => setEditSemester(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs bg-slate-900"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                      <option key={s} value={s} className="bg-slate-900 text-white">
+                        Semester {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Credit Value</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={editCredit}
+                    onChange={(e) => setEditCredit(e.target.value)}
+                    className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Course Description (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full p-2.5 rounded-xl glass-input text-white text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-glass-glow disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {editLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{editLoading ? 'Saving...' : 'Save Course Changes'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2.5 rounded-xl glass-pill text-slate-300 hover:text-white text-xs font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

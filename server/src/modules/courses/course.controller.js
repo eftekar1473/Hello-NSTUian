@@ -88,6 +88,58 @@ export async function getCourses(req, res) {
 }
 
 /**
+ * Get single course details by ID or course code
+ */
+export async function getCourseById(req, res) {
+  try {
+    const { id } = req.params;
+    const course = await prisma.course.findFirst({
+      where: {
+        OR: [{ id }, { course_code: id }],
+        is_active: true,
+      },
+      include: {
+        semester: true,
+        program: {
+          include: {
+            department: true,
+          },
+        },
+        _count: {
+          select: {
+            question_papers: {
+              where: { publication_status: 'published' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Not Found', message: 'Course not found.' });
+    }
+
+    const formatted = {
+      id: course.id,
+      course_code: course.course_code,
+      course_title: course.course_title,
+      credit: course.credit,
+      description: course.description,
+      is_active: course.is_active,
+      semester_number: course.semester?.semester_number,
+      semester_name: course.semester?.semester_name,
+      department: course.program?.department,
+      total_questions: course._count?.question_papers || 0,
+    };
+
+    return res.json({ course: formatted });
+  } catch (err) {
+    console.error('getCourseById error:', err);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to fetch course details.' });
+  }
+}
+
+/**
  * Create a new academic course
  * Allowed for:
  * - SUPER_ADMIN (for any department)

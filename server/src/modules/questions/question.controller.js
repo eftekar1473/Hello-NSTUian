@@ -148,27 +148,54 @@ export async function searchQuestions(req, res) {
 
     const queryStr = (q || '').trim();
 
+    if (!queryStr) {
+      return res.json({ departments: [], courses: [], questions: [] });
+    }
+
+    // Generate code variations (e.g. "CSE 3201", "CSE3201", "CSE-3201")
+    const searchTokens = Array.from(
+      new Set([
+        queryStr,
+        queryStr.replace(/\s+/g, ''),
+        queryStr.replace(/^([a-zA-Z]+)\s*(\d.*)$/, '$1 $2'),
+        queryStr.replace(/^([a-zA-Z]+)\s*(\d.*)$/, '$1-$2'),
+      ])
+    ).filter(Boolean);
+
     // Find departments matching query
+    const departmentOR = [];
+    for (const token of searchTokens) {
+      departmentOR.push(
+        { name: { contains: token, mode: 'insensitive' } },
+        { department_code: { contains: token, mode: 'insensitive' } },
+        { abbreviation: { contains: token, mode: 'insensitive' } }
+      );
+    }
+
     const departments = await prisma.department.findMany({
       where: {
         is_active: true,
-        OR: [
-          { name: { contains: queryStr } },
-          { department_code: { contains: queryStr } },
-          { abbreviation: { contains: queryStr } },
-        ],
+        OR: departmentOR,
       },
       take: 10,
     });
 
-    // Find courses matching query
+    // Find courses matching query (by course code, course title, or department name/abbr)
+    const courseOR = [];
+    for (const token of searchTokens) {
+      courseOR.push(
+        { course_code: { contains: token, mode: 'insensitive' } },
+        { course_title: { contains: token, mode: 'insensitive' } },
+        { program: { department: { name: { contains: token, mode: 'insensitive' } } } },
+        { program: { department: { abbreviation: { contains: token, mode: 'insensitive' } } } },
+        { program: { department: { department_code: { contains: token, mode: 'insensitive' } } } }
+      );
+    }
+
     const courses = await prisma.course.findMany({
       where: {
         is_active: true,
-        OR: [
-          { course_code: { contains: queryStr } },
-          { course_title: { contains: queryStr } },
-        ],
+        OR: courseOR,
       },
       include: {
         program: {
@@ -177,8 +204,15 @@ export async function searchQuestions(req, res) {
           },
         },
         semester: true,
+        _count: {
+          select: {
+            question_papers: {
+              where: { publication_status: 'published' },
+            },
+          },
+        },
       },
-      take: 15,
+      take: 20,
     });
 
     // Find question papers
@@ -186,14 +220,18 @@ export async function searchQuestions(req, res) {
       publication_status: 'published',
     };
 
-    if (queryStr) {
-      questionWhere.OR = [
-        { title: { contains: queryStr } },
-        { description: { contains: queryStr } },
-        { course: { course_code: { contains: queryStr } } },
-        { course: { course_title: { contains: queryStr } } },
-      ];
+    const questionOR = [];
+    for (const token of searchTokens) {
+      questionOR.push(
+        { title: { contains: token, mode: 'insensitive' } },
+        { description: { contains: token, mode: 'insensitive' } },
+        { course: { course_code: { contains: token, mode: 'insensitive' } } },
+        { course: { course_title: { contains: token, mode: 'insensitive' } } },
+        { department: { name: { contains: token, mode: 'insensitive' } } },
+        { department: { abbreviation: { contains: token, mode: 'insensitive' } } }
+      );
     }
+    questionWhere.OR = questionOR;
 
     if (departmentId) questionWhere.department_id = departmentId;
     if (examTypeId) questionWhere.exam_type_id = examTypeId;

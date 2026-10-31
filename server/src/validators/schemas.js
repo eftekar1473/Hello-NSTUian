@@ -30,15 +30,15 @@ export const changePasswordSchema = z.object({
 export const uploadQuestionSchema = z.object({
   departmentId: z.string().min(1, 'Department is required'),
   courseId: z.string().min(1, 'Course is required'),
-  universitySessionId: z.string().optional().nullable(),
-  examSessionId: z.string().optional().nullable(),
+  universitySessionId: z.preprocess((val) => (val === '' ? null : val), z.string().optional().nullable()),
+  examSessionId: z.preprocess((val) => (val === '' ? null : val), z.string().optional().nullable()),
   examTypeId: z.string().min(1, 'Exam Type is required'),
-  ctNumber: z.coerce.number().int().min(1).max(10).optional().nullable(),
-  setName: z.string().max(20).optional().nullable(),
-  title: z.string().max(200).optional().nullable(),
-  description: z.string().max(1000).optional().nullable(),
-  contributorName: z.string().optional().nullable(),
-  contributorEmail: z.string().email().optional().nullable(),
+  ctNumber: z.preprocess((val) => (val === '' || val === null || val === undefined ? null : val), z.coerce.number().int().min(1).max(10).optional().nullable()),
+  setName: z.preprocess((val) => (val === '' ? null : val), z.string().max(20).optional().nullable()),
+  title: z.preprocess((val) => (val === '' ? null : val), z.string().max(200).optional().nullable()),
+  description: z.preprocess((val) => (val === '' ? null : val), z.string().max(1000).optional().nullable()),
+  contributorName: z.preprocess((val) => (val === '' ? null : val), z.string().optional().nullable()),
+  contributorEmail: z.preprocess((val) => (val === '' ? null : val), z.string().email('Please enter a valid email address').optional().nullable()),
 });
 
 export const correctionRequestSchema = z.object({

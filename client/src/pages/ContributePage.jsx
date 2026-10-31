@@ -149,6 +149,15 @@ export default function ContributePage() {
       formData.append('file', file);
 
       if (!user) {
+        if (guestEmail && !guestEmail.includes('@')) {
+          setFeedback({
+            type: 'error',
+            message: 'Invalid Email Address',
+            details: 'Please enter a valid email address or leave the field blank for anonymous contribution.',
+          });
+          setSubmitting(false);
+          return;
+        }
         formData.append('contributorName', guestName.trim() || 'NSTU Student');
         formData.append('contributorEmail', guestEmail.trim() || 'student@student.nstu.edu.bd');
       }
@@ -172,12 +181,16 @@ export default function ContributePage() {
       // Reset file input
       setFile(null);
     } catch (err) {
+      const issueDetails = Array.isArray(err.data?.issues) && err.data.issues.length > 0
+        ? err.data.issues.map((i) => i.message || `${i.path?.join('.')}: invalid`).join(', ')
+        : err.data?.message || err.message;
+
       setFeedback({
         type: 'error',
-        message: err.message || 'Failed to submit question paper.',
-        details: err.message?.toLowerCase().includes('validation')
-          ? 'Please ensure all required fields (Department, Course, Exam Type, and Question Paper file) are properly filled.'
-          : undefined,
+        message: err.message?.toLowerCase().includes('validation')
+          ? 'Form Validation Issue'
+          : err.message || 'Failed to submit question paper.',
+        details: issueDetails || 'Please ensure all required fields (Department, Course, Exam Type, and Question Paper file) are properly filled.',
       });
     } finally {
       setSubmitting(false);

@@ -44,25 +44,23 @@ export async function register(req, res) {
 
     // Generate a 6-digit verification code for EduMail
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await prisma.auditLog.create({
       data: {
         actor_user_id: user.id,
         action: 'EMAIL_VERIFICATION_CODE_GENERATED',
         entity_type: 'USER',
         entity_id: user.id,
-        details: JSON.stringify({ email: user.email, code: verificationCode }),
+        details: JSON.stringify({ email: user.email, code: verificationCode, expiresAt: expiresAt.toISOString() }),
       },
     });
 
-    const token = jwt.sign({ userId: user.id }, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
-    });
-
+    // Mandatory verification: DO NOT issue a JWT token until email OTP is verified!
     return res.status(201).json({
-      message: 'Account created! Please verify your NSTU EduMail to activate your account.',
+      message: 'Account created! Please verify your NSTU EduMail with the 6-digit OTP to activate your account.',
       user,
-      token,
       verificationRequired: true,
+      email: user.email,
       verificationCode,
     });
   } catch (err) {
@@ -264,6 +262,46 @@ export async function verifyEmail(req, res) {
   } catch (err) {
     console.error('verifyEmail error:', err);
     return res.status(500).json({ error: 'Server Error', message: 'Email verification failed.' });
+  }
+}
+
+export async function resendOtp(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Bad Request', message: 'Email address is required.' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+    if (!user) {
+      return res.status(404).json({ error: 'Not Found', message: 'No account found with this email.' });
+    }
+    if (user.email_verified_at) {
+      return res.status(400).json({ error: 'Bad Request', message: 'Account is already verified. Please sign in.' });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await prisma.auditLog.create({
+      data: {
+        actor_user_id: user.id,
+        action: 'EMAIL_VERIFICATION_CODE_GENERATED',
+        entity_type: 'USER',
+        entity_id: user.id,
+        details: JSON.stringify({ email: user.email, code: verificationCode, expiresAt: expiresAt.toISOString() }),
+      },
+    });
+
+    return res.json({
+      message: 'A new 6-digit verification OTP has been generated for your EduMail.',
+      email: user.email,
+      verificationCode,
+    });
+  } catch (err) {
+    console.error('resendOtp error:', err);
+    return res.status(500).json({ error: 'Server Error', message: 'Failed to resend verification code.' });
   }
 }
 

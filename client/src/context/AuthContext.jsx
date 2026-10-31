@@ -35,13 +35,11 @@ export function AuthProvider({ children }) {
 
   const register = async (email, password, displayName, studentId) => {
     const res = await api.register({ email, password, displayName, studentId });
-    // If not requiring separate verification step, set user session immediately
-    if (!res.verificationRequired) {
-      setAuthToken(res.token);
-      setCurrentUser(res.user);
-      setUser(res.user);
-    }
     return res;
+  };
+
+  const resendOtp = async (email) => {
+    return await api.resendOtp({ email });
   };
 
   const verifyEmail = async (email, code, studentId) => {
@@ -73,6 +71,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         verifyEmail,
+        resendOtp,
         logout,
         isAdmin,
         isSuperAdmin,

@@ -59,11 +59,33 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.department.programs[0].semesters.length).toBe(8);
     });
 
-    it('GET /api/v1/search returns search results', async () => {
-      const res = await request(app).get('/api/v1/search?q=IIT');
-      expect(res.status).toBe(200);
-      expect(res.body.departments).toBeDefined();
-      expect(res.body.courses).toBeDefined();
+    it('GET /api/v1/search returns search results by dept, course code, and course name', async () => {
+      // Search by dept name (case-insensitive)
+      const resDept = await request(app).get('/api/v1/search?q=software');
+      expect(resDept.status).toBe(200);
+      expect(resDept.body.departments).toBeDefined();
+
+      // Search by course code with space
+      const resCodeSpace = await request(app).get('/api/v1/search?q=iit 1101');
+      expect(resCodeSpace.status).toBe(200);
+      expect(resCodeSpace.body.courses).toBeDefined();
+
+      // Search by course code without space
+      const resCodeNoSpace = await request(app).get('/api/v1/search?q=iit1101');
+      expect(resCodeNoSpace.status).toBe(200);
+      expect(resCodeNoSpace.body.courses).toBeDefined();
+    });
+
+    it('GET /api/v1/courses/:id returns single course details', async () => {
+      const allCourses = await request(app).get('/api/v1/courses');
+      expect(allCourses.status).toBe(200);
+      if (allCourses.body.courses?.length > 0) {
+        const first = allCourses.body.courses[0];
+        const res = await request(app).get(`/api/v1/courses/${first.id}`);
+        expect(res.status).toBe(200);
+        expect(res.body.course.id).toBe(first.id);
+        expect(res.body.course.course_code).toBe(first.course_code);
+      }
     });
   });
 
@@ -78,7 +100,7 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(res.body.error).toBe('Validation Error');
     });
 
-    it('Accepts registration with valid NSTU EduMail', async () => {
+    it('Accepts registration with valid NSTU EduMail and enforces mandatory OTP verification', async () => {
       const testEmail = `student${Date.now()}@nstu.edu.bd`;
       const res = await request(app).post('/api/v1/auth/register').send({
         email: testEmail,
@@ -88,7 +110,9 @@ describe('Hello NSTUian API Test Suite', () => {
       });
       expect(res.status).toBe(201);
       expect(res.body.user.email).toBe(testEmail);
-      expect(res.body.token).toBeDefined();
+      expect(res.body.verificationRequired).toBe(true);
+      expect(res.body.verificationCode).toBeDefined();
+      expect(res.body.token).toBeUndefined(); // Token must NOT be issued before verification
     });
 
     it('Requires and completes EduMail verification for new registered account', async () => {
@@ -103,13 +127,21 @@ describe('Hello NSTUian API Test Suite', () => {
       expect(regRes.body.verificationRequired).toBe(true);
       expect(regRes.body.verificationCode).toBeDefined();
 
+      // Test resend OTP
+      const resendRes = await request(app).post('/api/v1/auth/resend-otp').send({
+        email: testEmail,
+      });
+      expect(resendRes.status).toBe(200);
+      expect(resendRes.body.verificationCode).toBeDefined();
+
       // Verify email with the generated code
       const verifyRes = await request(app).post('/api/v1/auth/verify-email').send({
         email: testEmail,
-        code: regRes.body.verificationCode,
+        code: resendRes.body.verificationCode,
       });
       expect(verifyRes.status).toBe(200);
       expect(verifyRes.body.verified).toBe(true);
+      expect(verifyRes.body.token).toBeDefined();
       expect(verifyRes.body.user.email_verified_at).toBeTruthy();
     });
 

@@ -64,7 +64,10 @@ async function request(endpoint, options = {}) {
     if (!errorMsg) {
       errorMsg = data.error || `HTTP error ${res.status}`;
     }
-    throw new Error(errorMsg);
+    const err = new Error(errorMsg);
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
 
   return data;
@@ -89,6 +92,7 @@ export const api = {
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   verifyEmail: (body) => request('/auth/verify-email', { method: 'POST', body: JSON.stringify(body) }),
+  resendOtp: (body) => request('/auth/resend-otp', { method: 'POST', body: JSON.stringify(body) }),
   getMe: () => request('/auth/me'),
   changePassword: (body) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
 
@@ -108,6 +112,7 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return request(`/courses${qs ? `?${qs}` : ''}`);
   },
+  getCourseById: (id) => request(`/courses/${id}`),
   createCourse: (body) => request('/courses', { method: 'POST', body: JSON.stringify(body) }),
   updateCourse: (id, body) => request(`/courses/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteCourse: (id) => request(`/courses/${id}`, { method: 'DELETE' }),

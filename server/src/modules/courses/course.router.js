@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getCourses,
+  getCourseById,
   createCourse,
   updateCourse,
   deleteCourse,
@@ -31,6 +32,9 @@ router.get('/', (req, res, next) => {
   }
   next();
 }, getCourses);
+
+// Public single course details
+router.get('/:id', getCourseById);
 
 // Admin-only course creation, editing, deletion
 // Both SUPER_ADMIN and DEPARTMENT_ADMIN can perform these (scoped in controller)

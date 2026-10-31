@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, UserPlus, Info, AlertCircle, Shield, CheckCircle2, KeyRound, ArrowLeft, Mail } from 'lucide-react';
+import { LogIn, UserPlus, Info, AlertCircle, Shield, CheckCircle2, KeyRound, ArrowLeft, Mail, RefreshCw, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -17,8 +17,9 @@ export default function LoginPage() {
   const [studentId, setStudentId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  const { login, register, verifyEmail } = useAuth();
+  const { login, register, verifyEmail, resendOtp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -33,30 +34,48 @@ export default function LoginPage() {
     try {
       if (isRegister) {
         const res = await register(email.trim(), password, displayName.trim(), studentId.trim());
-        if (res?.verificationRequired) {
-          setIsVerifying(true);
-          setVerifyEmailAddress(email.trim());
-          setGeneratedCode(res.verificationCode || '');
-          setSuccessMsg('Account registered! Please enter the 6-digit verification code below to verify your EduMail.');
-          return;
-        }
+        setIsVerifying(true);
+        setVerifyEmailAddress(email.trim());
+        setGeneratedCode(res.verificationCode || '');
+        setSuccessMsg(res.message || 'Account registered! Please enter the 6-digit OTP verification code below to verify your EduMail.');
+        return;
       } else {
         await login(email.trim(), password);
       }
       navigate(from, { replace: true });
     } catch (err) {
       if (
+        err.status === 403 ||
         err.message?.toLowerCase().includes('verification') ||
         err.message?.toLowerCase().includes('unverified')
       ) {
         setIsVerifying(true);
         setVerifyEmailAddress(email.trim());
-        setError(err.message);
+        if (err.data?.verificationCode) {
+          setGeneratedCode(err.data.verificationCode);
+        }
+        setError(err.message || 'Your account requires email verification. Please enter the OTP code.');
       } else {
         setError(err.message || 'Authentication failed. Please verify your credentials.');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!verifyEmailAddress) return;
+    setResending(true);
+    setError('');
+    setSuccessMsg('');
+    try {
+      const res = await resendOtp(verifyEmailAddress);
+      setGeneratedCode(res.verificationCode || '');
+      setSuccessMsg(res.message || 'A new verification code has been generated and sent to your email.');
+    } catch (err) {
+      setError(err.message || 'Failed to resend verification code.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -167,6 +186,19 @@ export default function LoginPage() {
                   onChange={(e) => setVerifyCode(e.target.value)}
                   className="w-full p-3 rounded-xl glass-input text-center text-lg font-mono tracking-widest text-white placeholder-slate-500 focus:border-cyan-400"
                 />
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <span className="text-slate-400">Didn't receive code?</span>
+                <button
+                  type="button"
+                  disabled={resending}
+                  onClick={handleResendOtp}
+                  className="inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer disabled:opacity-50"
+                >
+                  {resending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  <span>{resending ? 'Sending...' : 'Resend OTP Code'}</span>
+                </button>
               </div>
 
               <button
